@@ -1,0 +1,5 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <engine:Template name="MainMenuVisualTree" src="project://database/Assets/UI%20Toolkit/MainMenuVisualTree.uxml?fileID=9197481963319205126&amp;guid=41b0910738d54044b9c5f349033a1cec&amp;type=3#MainMenuVisualTree" />
+    <Style src="project://database/Assets/UI%20Toolkit/UnityThemes/MainMenuStyle.uss?fileID=7433441132597879392&amp;guid=cdb0410ce981b274fa65dd76186c7c78&amp;type=3#MainMenuStyle" />
+    <engine:Instance template="MainMenuVisualTree" style="flex-grow: 1;" />
+</engine:UXML>

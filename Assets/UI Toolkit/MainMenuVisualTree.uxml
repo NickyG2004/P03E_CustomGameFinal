@@ -1,0 +1,22 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI%20Toolkit/UnityThemes/MainMenuStyle.uss?fileID=7433441132597879392&amp;guid=cdb0410ce981b274fa65dd76186c7c78&amp;type=3#MainMenuStyle" />
+    <engine:VisualElement name="Container" style="flex-grow: 1; border-left-color: rgba(255, 255, 255, 0); border-right-color: rgba(255, 255, 255, 0); border-top-color: rgba(255, 255, 255, 0); border-bottom-color: rgba(255, 255, 255, 0); margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; -unity-text-outline-width: 0; background-image: url(&quot;project://database/Assets/_Game/Sprites/MainMenu/MainMenuBackground.png?fileID=2800000&amp;guid=eec075acd5f996745863eaa69276cb99&amp;type=3#MainMenuBackground&quot;);">
+        <engine:Label text="Main Menu" name="Header" class="header" style="align-self: center; align-content: auto; margin-top: 50px; font-size: 125px; -unity-font-definition: url(&quot;project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=2230732570650464555&amp;guid=7508fb1da4d643a4b80b720b8f099e35&amp;type=3#NotInter-Regular&quot;); -unity-font-style: bold;" />
+        <engine:VisualElement name="RootMenu" style="flex-grow: 1; visibility: visible; display: flex;">
+            <engine:Button text="Start" name="StartButton" class="button" style="left: auto; right: auto;" />
+            <engine:Button text="Settings" name="SettingsButton" class="button" style="right: auto;" />
+            <engine:Button text="Credits" name="CreditsButton" class="button" style="left: auto; top: auto; bottom: auto;" />
+            <engine:Button text="Quit" name="QuitButton" class="button" style="left: auto; bottom: auto; top: auto;" />
+        </engine:VisualElement>
+        <engine:VisualElement name="SettingsMenu" style="flex-grow: 1; display: none;">
+            <engine:Label text="Settings" name="SettingsHeader" class="header header2" style="align-self: center; margin-top: 50px; font-size: 90px; -unity-font-style: bold; -unity-text-align: upper-center; text-shadow: 4px 4px 0 rgb(0, 0, 0);" />
+            <engine:Label text="Place Holder Settings Text&#10;This Test Means Nothing In particular. &#10;Just a random comllection of words to get a feel for how the font looks!" name="SettingsText" class="bodyText" style="align-self: center; align-items: center; margin-top: 50px; -unity-text-align: middle-center; color: rgb(255, 255, 255); text-shadow: 4px 4px 0 rgb(0, 0, 0); font-size: 40px; -unity-text-outline-color: rgb(0, 0, 0);" />
+            <engine:Button text="Back" name="SettingsBackButton" class="button" style="right: auto; top: auto; left: auto; display: flex;" />
+        </engine:VisualElement>
+        <engine:VisualElement name="CreditsMenu" style="flex-grow: 1; display: none;">
+            <engine:Label text="Credits" name="CreditsHeader" class="header header2" style="align-self: center; margin-top: 50px; font-size: 90px; -unity-font-style: bold; -unity-text-align: upper-center; text-shadow: 4px 4px 0 rgb(0, 0, 0);" />
+            <engine:Label text="Developer: Nicholas Gross&#10;Programmer: Nicholas Gross&#10;UI Design: Nicholas Gross&#10;Publisher: Adam Chandler" name="CreditsText" enable-rich-text="false" class="bodyText" style="align-self: center; align-items: center; margin-top: 35px; -unity-text-align: middle-center; color: rgb(255, 255, 255); text-shadow: 4px 4px 0 rgb(0, 0, 0); font-size: 40px; -unity-text-outline-color: rgb(0, 0, 0);" />
+            <engine:Button text="Back" name="CreditsBackButton" class="button" style="right: auto; top: auto; left: auto; display: flex;" />
+        </engine:VisualElement>
+    </engine:VisualElement>
+</engine:UXML>
