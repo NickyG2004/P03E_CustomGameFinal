@@ -34,7 +34,7 @@ public class BattleSystem : MonoBehaviour
     [SerializeField] private int healAmount = 10;
 
     // set delay timers
-    [SerializeField] private float turnDelay = 1f;
+    [SerializeField] private float turnDelay = 2f;
     [SerializeField] private float battleStartDelay = 2f;
     [SerializeField] private float buttonDelay = 2f;
 
@@ -57,8 +57,24 @@ public class BattleSystem : MonoBehaviour
         }
 
         // Set up the battle by instantiating player and enemy units.
-        state = BattleState.START;
-        StartCoroutine(SetUpBattle());
+        StartBattle();
+    }
+
+    // public function that returns the current battle state.
+    public BattleState GetBattleState()
+    {
+        return state;
+    }
+
+    // public function to set the battle state.
+    public void SetBattleState(BattleState newState)
+    {
+        // debug message.
+        if (debugMode)
+        {
+            Debug.Log("BattleSystem: Setting battle state to " + newState);
+        }
+        state = newState;
     }
 
     // Function to start a battle
@@ -69,8 +85,10 @@ public class BattleSystem : MonoBehaviour
         {
             Debug.Log("BattleSystem: Starting battle");
         }
+
         // Set the battle state to START.
         state = BattleState.START;
+
         // Start the coroutine to set up the battle.
         StartCoroutine(SetUpBattle());
     }
@@ -97,6 +115,7 @@ public class BattleSystem : MonoBehaviour
         {
             Debug.Log("BattleSystem: Player Unit - " + playerUnit.unitName + ", Enemy Unit - " + enemyUnit.unitName);
         }
+
         // Initialize the HUDs with the player and enemy units.
         playerHUD.SetHUD(playerUnit);
         enemyHUD.SetHUD(enemyUnit);
@@ -116,8 +135,141 @@ public class BattleSystem : MonoBehaviour
         {
             Debug.Log("BattleSystem: Player's turn");
         }
+
         // Set the dialog text to indicate it's the player's turn.
         dialogueText.text = "Choose an action:";
+    }
+
+    public void OnAttackButton()
+    {
+        // debug message.
+        if (debugMode)
+        {
+            Debug.Log("BattleSystem: Player chose to attack");
+        }
+
+        // If it's the player's turn, proceed with the attack.
+        if (state != BattleState.PLAYERTURN)
+        {
+            return;
+        }
+
+        StartCoroutine(PlayerAttack());
+    }
+
+    IEnumerator PlayerAttack()
+    {
+        // debug message.
+        if (debugMode)
+        {
+            Debug.Log("BattleSystem: Player attacking enemy");
+        }
+
+        // set current state of the enemy. / Damage Enemy (Alive or Dead).
+        bool isDead = enemyUnit.TakeDamage(playerUnit.damage);
+
+        // Update the enemy HUD with the new HP.
+        enemyHUD.SetHP(enemyUnit.currentHP);
+
+        // Update the dialog text to indicate the player is attacking.
+        dialogueText.text = "The Attack was Successful!";
+
+        // Set the dialog text to indicate the player is attacking.
+        yield return new WaitForSeconds(buttonDelay);
+
+        // check if the enemy is dead.
+        if (isDead)
+        {
+            // debug message.
+            if (debugMode)
+            {
+                Debug.Log("BattleSystem: Enemy defeated");
+            }
+
+            // Update the dialog text to indicate the enemy is defeated.
+            dialogueText.text = enemyUnit.unitName + " has been defeated!";
+
+            // Set the battle state to WON.
+            state = BattleState.WON;
+
+            // Wait for a moment before ending the battle.
+            yield return new WaitForSeconds(turnDelay);
+
+            // End the battle.
+            EndBattle();
+        }
+        else
+        {
+            // debug message.
+            if (debugMode)
+            {
+                Debug.Log("BattleSystem: Enemy took damage, remaining HP: " + enemyUnit.currentHP);
+            }
+
+            // If the enemy is still alive, proceed to the enemy's turn.
+            state = BattleState.ENEMYTURN;
+
+            // Update the dialog text to indicate the enemy's turn.
+            dialogueText.text = "Enemy's turn!";
+
+            // Wait for a moment before starting the enemy's turn.
+            yield return new WaitForSeconds(turnDelay);
+
+            // Start the enemy's turn.
+            StartCoroutine(enemyTurn());
+
+        }
+
+    }
+    public void OnHealButton()
+    {
+        // debug message.
+        if (debugMode)
+        {
+            Debug.Log("BattleSystem: Player chose to heal");
+        }
+
+        // If it's the player's turn, proceed with the heal action.
+        if (state != BattleState.PLAYERTURN)
+        {
+            return;
+        }
+
+        // start heal coroutine.
+        StartCoroutine(PlayerHeal());
+    }
+
+    IEnumerator PlayerHeal()
+    {
+        // debug message.
+        if (debugMode)
+        {
+            Debug.Log("BattleSystem: Player healing");
+        }
+
+        // Set the dialog text to indicate the player is healing.
+        dialogueText.text = "Healing...";
+
+        // Wait for a moment before healing.
+        yield return new WaitForSeconds(buttonDelay);
+
+        // Heal the player unit.
+        playerUnit.Heal(healAmount);
+
+        // Update the player's HUD with the new HP.
+        playerHUD.SetHP(playerUnit.currentHP);
+
+        // Update the dialog text to indicate the heal was successful.
+        dialogueText.text = "You healed for " + healAmount + " HP!";
+
+        // Wait for a moment before proceeding to the enemy's turn.
+        yield return new WaitForSeconds(turnDelay);
+
+        // Set the battle state to ENEMYTURN.
+        state = BattleState.ENEMYTURN;
+
+        // Start the enemy's turn.
+        StartCoroutine(enemyTurn());
     }
 
     IEnumerator enemyTurn()
@@ -186,138 +338,11 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
-    public void OnAttackButton()
-    {
-        // debug message.
-        if (debugMode)
-        {
-            Debug.Log("BattleSystem: Player chose to attack");
-        }
+    
 
-        // If it's the player's turn, proceed with the attack.
-        if (state != BattleState.PLAYERTURN)
-        {
-            return;
-        }
-            
-        StartCoroutine(PlayerAttack());
-    }
+    
 
-    IEnumerator PlayerAttack()
-    {
-        // debug message.
-        if (debugMode)
-        {
-            Debug.Log("BattleSystem: Player attacking enemy");
-        }
-
-        // set current state of the enemy. / Damage Enemy (Alive or Dead).
-        bool isDead = enemyUnit.TakeDamage(playerUnit.damage);
-
-        // Update the enemy HUD with the new HP.
-        enemyHUD.SetHP(enemyUnit.currentHP);
-
-        // Update the dialog text to indicate the player is attacking.
-        dialogueText.text = "The Attack was Successful!";
-
-        // Set the dialog text to indicate the player is attacking.
-        yield return new WaitForSeconds(buttonDelay);
-
-        // check if the enemy is dead.
-        if (isDead)
-        {
-            // debug message.
-            if (debugMode)
-            {
-                Debug.Log("BattleSystem: Enemy defeated");
-            }
-
-            // Update the dialog text to indicate the enemy is defeated.
-            dialogueText.text = enemyUnit.unitName + " has been defeated!";
-
-            // Set the battle state to WON.
-            state = BattleState.WON;
-
-            // Wait for a moment before ending the battle.
-            yield return new WaitForSeconds(turnDelay);
-
-            // End the battle.
-            EndBattle();
-        }
-        else
-        {
-            // debug message.
-            if (debugMode)
-            {
-                Debug.Log("BattleSystem: Enemy took damage, remaining HP: " + enemyUnit.currentHP);
-            }
-
-            // If the enemy is still alive, proceed to the enemy's turn.
-            state = BattleState.ENEMYTURN;
-
-            // Update the dialog text to indicate the enemy's turn.
-            dialogueText.text = "Enemy's turn!";
-
-            // Wait for a moment before starting the enemy's turn.
-            yield return new WaitForSeconds(turnDelay);
-
-            // Start the enemy's turn.
-            StartCoroutine(enemyTurn());
-
-        }
-
-    }
-
-    public void OnHealButton()
-    {
-        // debug message.
-        if (debugMode)
-        {
-            Debug.Log("BattleSystem: Player chose to heal");
-        }
-
-        // If it's the player's turn, proceed with the heal action.
-        if (state != BattleState.PLAYERTURN)
-        {
-            return;
-        }
-
-        // start heal coroutine.
-        StartCoroutine(PlayerHeal());
-    }
-
-    IEnumerator PlayerHeal()
-    {
-        // debug message.
-        if (debugMode)
-        {
-            Debug.Log("BattleSystem: Player healing");
-        }
-
-        // Set the dialog text to indicate the player is healing.
-        dialogueText.text = "Healing...";
-
-        // Wait for a moment before healing.
-        yield return new WaitForSeconds(buttonDelay);
-
-        // Heal the player unit.
-        playerUnit.Heal(healAmount);
-
-        // Update the player's HUD with the new HP.
-        playerHUD.SetHP(playerUnit.currentHP);
-
-        // Update the dialog text to indicate the heal was successful.
-        dialogueText.text = "You healed for " + healAmount + " HP!";
-
-        // Wait for a moment before proceeding to the enemy's turn.
-        yield return new WaitForSeconds(turnDelay);
-
-        // Set the battle state to ENEMYTURN.
-        state = BattleState.ENEMYTURN;
-
-        // Start the enemy's turn.
-        StartCoroutine(enemyTurn());
-    }
+    
 
     void EndBattle()
     {
@@ -374,23 +399,6 @@ public class BattleSystem : MonoBehaviour
         }
 
         // Here you can implement the logic to present the after battle menu or transition to another scene.
-    }
-
-    // public function that returns the current battle state.
-    public BattleState GetBattleState()
-    {
-        return state;
-    }
-
-    // public function to set the battle state.
-    public void SetBattleState(BattleState newState)
-    {
-        // debug message.
-        if (debugMode)
-        {
-            Debug.Log("BattleSystem: Setting battle state to " + newState);
-        }
-        state = newState;
     }
 
 }

@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class Unit : MonoBehaviour
 {
+    [Header("DebugMode")]
+    public bool debugMode = false; // Enable or disable debug mode
+
     [Header("Identity")]
     public string unitName;
     public int unitLevel = 1;
