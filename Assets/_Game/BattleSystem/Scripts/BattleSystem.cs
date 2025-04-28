@@ -9,7 +9,7 @@ public enum BattleState { START, PLAYERTURN, ENEMYTURN, WON, LOST, NEXTMENU }
 public class BattleSystem : MonoBehaviour
 {
     // Set to true to enable debug logs
-    public bool debugMode = true;
+    public bool debugMode = false;
 
     // Prefabs for player and enemy units.
     [SerializeField] private GameObject playerPrefab;
@@ -41,6 +41,9 @@ public class BattleSystem : MonoBehaviour
     // Level up amount for the player unit when they win a battle.
     [SerializeField] private int levelUpAmount = 1;
 
+    // set MenuSystem reference if needed.
+    [SerializeField] private MenuSystem menuSystem;
+
     // The current state of the battle.
     public BattleState state;
 
@@ -55,6 +58,20 @@ public class BattleSystem : MonoBehaviour
 
         // Set up the battle by instantiating player and enemy units.
         state = BattleState.START;
+        StartCoroutine(SetUpBattle());
+    }
+
+    // Function to start a battle
+    public void StartBattle()
+    {
+        // debug message.
+        if (debugMode)
+        {
+            Debug.Log("BattleSystem: Starting battle");
+        }
+        // Set the battle state to START.
+        state = BattleState.START;
+        // Start the coroutine to set up the battle.
         StartCoroutine(SetUpBattle());
     }
 
@@ -327,7 +344,6 @@ public class BattleSystem : MonoBehaviour
             // Increase enemy level by 1 - 2 levels for the next round
             enemyUnit.LevelUp(Random.Range(1, 3));
 
-
             // Update the player's HUD with the new level and HP.
             playerHUD.SetHUD(playerUnit);
 
@@ -341,16 +357,40 @@ public class BattleSystem : MonoBehaviour
             }
 
             // For example, you can load a victory menu.
-
+            if (menuSystem != null)
+            {
+                menuSystem.ShowWinMenu();
+            }
+            else
+            {
+                Debug.LogWarning("BattleSystem: MenuSystem reference is not assigned.");
+            }
         }
 
         if (state == BattleState.LOST)
         {
             // Set the dialog text to indicate the battle is over.
-            dialogueText.text = "You Lost the Ballte...";
+            dialogueText.text = "You Lost the Battle...";
         }
 
         // Here you can implement the logic to present the after battle menu or transition to another scene.
+    }
+
+    // public function that returns the current battle state.
+    public BattleState GetBattleState()
+    {
+        return state;
+    }
+
+    // public function to set the battle state.
+    public void SetBattleState(BattleState newState)
+    {
+        // debug message.
+        if (debugMode)
+        {
+            Debug.Log("BattleSystem: Setting battle state to " + newState);
+        }
+        state = newState;
     }
 
 }

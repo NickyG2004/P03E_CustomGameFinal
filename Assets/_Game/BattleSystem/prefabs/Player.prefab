@@ -48,7 +48,7 @@ MonoBehaviour:
   unitName: Player Sprite
   unitLevel: 1
   baseMaxHP: 20
-  baseDamage: 5
+  baseDamage: 30
   hpLogGrowthFactor: 10
   damageLogGrowthFactor: 2
 --- !u!1 &4347409319922439739

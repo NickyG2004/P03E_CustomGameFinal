@@ -7,7 +7,7 @@ using TMPro;
 public class BattleHUD : MonoBehaviour
 {
     // Set to true to enable debug logs
-    public bool debugMode = true;
+    public bool debugMode = false;
 
      [SerializeField] private TextMeshProUGUI nameText;
      [SerializeField] private TextMeshProUGUI levelText;
