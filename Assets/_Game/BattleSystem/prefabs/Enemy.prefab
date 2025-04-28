@@ -96,7 +96,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3706770464250027590}
-  - component: {fileID: -9144578974431490559}
+  - component: {fileID: 9220728719675286086}
+  - component: {fileID: 2378180575051249127}
+  - component: {fileID: 5245312250406806078}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Untagged
@@ -120,7 +122,7 @@ Transform:
   - {fileID: 6620589147302658452}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &-9144578974431490559
+--- !u!114 &9220728719675286086
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -129,15 +131,40 @@ MonoBehaviour:
   m_GameObject: {fileID: 4626300669077577570}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 098d91e0872229c4f92b31a45ab1d992, type: 3}
+  m_Script: {fileID: 11500000, guid: 328b944b14cad1747b50f8ae261dc797, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  unitName: Enemy Sprite
-  unitLevel: 1
-  baseMaxHP: 15
-  baseDamage: 5
+  baseMaxHP: 10
+  baseDamage: 30
   hpLogGrowthFactor: 10
   damageLogGrowthFactor: 2
+--- !u!114 &2378180575051249127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4626300669077577570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7f3330386add904e9367a6843078b08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &5245312250406806078
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4626300669077577570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92db2a0d3a8efcd4daa7b6654fa74ab9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  debugMode: 0
+  unitName: Enemy
+  unitLevel: 1
 --- !u!1 &5637182914504123156
 GameObject:
   m_ObjectHideFlags: 0

@@ -15,7 +15,8 @@ public class MainMenuEvents : MonoBehaviour
     private VisualElement _creditsMenu;
 
     private Button _startButton;
-    private Button _settingsButton;
+    private Button _continueButton;
+    ////private Button _settingsButton;
     private Button _setingsBackButton;
     private Button _quitButton;
     private Button _creditsButton;
@@ -40,9 +41,22 @@ public class MainMenuEvents : MonoBehaviour
         _startButton = _document.rootVisualElement.Q("StartButton") as Button;
         _startButton.RegisterCallback<ClickEvent>(OnPlayGameClick);
 
-        // get the settings button and register the callback
-        _settingsButton = _document.rootVisualElement.Q("SettingsButton") as Button;
-        _settingsButton.RegisterCallback<ClickEvent>(OnSettingsButtonClick);
+        // 1) Grab the Continue button
+        _continueButton = _document.rootVisualElement.Q<Button>("ContinueButton");
+
+        // 2) Register its click and show/hide based on saved data
+        if (_continueButton != null)
+        {
+            _continueButton.RegisterCallback<ClickEvent>(OnContinueClick);
+
+            int savedLevel = PlayerPrefs.GetInt("PlayerLevel", 1);
+            _continueButton.style.display =
+                (savedLevel > 1) ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        //// get the settings button and register the callback
+        ////_settingsButton = _document.rootVisualElement.Q("SettingsButton") as Button;
+        ////_settingsButton.RegisterCallback<ClickEvent>(OnSettingsButtonClick);
 
         // get the settings back button and register the callback
         _setingsBackButton = _document.rootVisualElement.Q("SettingsBackButton") as Button;
@@ -62,25 +76,26 @@ public class MainMenuEvents : MonoBehaviour
 
 
         _menuButtons = _document.rootVisualElement.Query<Button>().ToList();
-        for (int i = 0; i < _menuButtons.Count; i++)
-        {
-            _menuButtons[i].RegisterCallback<ClickEvent>(OnAllButtonsClick);
-        }
+        foreach (var btn in _menuButtons)
+            btn.RegisterCallback<ClickEvent>(OnAllButtonsClick);
     }
 
     private void OnDisable()
     {
         _startButton.UnregisterCallback<ClickEvent>(OnPlayGameClick);
-        _settingsButton.UnregisterCallback<ClickEvent>(OnSettingsButtonClick);
+        //_settingsButton.UnregisterCallback<ClickEvent>(OnSettingsButtonClick);
         _setingsBackButton.UnregisterCallback<ClickEvent>(OnSettingsBackButtonClick);
         _quitButton.UnregisterCallback<ClickEvent>(OnQuitButtonClick);
         _creditsButton.UnregisterCallback<ClickEvent>(OnCreditsButtonClick);
         _creditsBackButton.UnregisterCallback<ClickEvent>(OnCreditsBackButtonClick);
 
-        for (int i = 0; i < _menuButtons.Count; i++)
-        {
-            _menuButtons[i].UnregisterCallback<ClickEvent>(OnAllButtonsClick);
-        }
+        // **Continue button callback**
+        if (_continueButton != null)
+            _continueButton.UnregisterCallback<ClickEvent>(OnContinueClick);
+
+        // Unregister all menu buttons
+        foreach (var btn in _menuButtons)
+            btn.UnregisterCallback<ClickEvent>(OnAllButtonsClick);
     }
 
     private void OnSettingsButtonClick(ClickEvent evt)
@@ -107,15 +122,27 @@ public class MainMenuEvents : MonoBehaviour
 
     private void OnPlayGameClick(ClickEvent evt)
     {
-        if (debugMode)
-        {
-            Debug.Log("MainMenuEvent: Start Button Clicked");
-        }
+        if (debugMode) Debug.Log("MainMenu: Start New Game");
+        // reset save
+        PlayerPrefs.SetInt("PlayerLevel", 1);
+        PlayerPrefs.SetInt("EnemyLevel", 1);
+        PlayerPrefs.Save();
 
-        // Change the Music
+        // Play the level song
         MusicManager.Instance.Play(_levelSong, 3f);
 
         // Load the game after pressing the start button
+        SceneManager.LoadScene(_starLevelName);
+    }
+
+    private void OnContinueClick(ClickEvent evt)
+    {
+        if (debugMode) Debug.Log("MainMenu: Continue Game");
+
+        // Play the level song
+        MusicManager.Instance.Play(_levelSong, 3f);
+
+        // Load the game after pressing the continue button
         SceneManager.LoadScene(_starLevelName);
     }
 
