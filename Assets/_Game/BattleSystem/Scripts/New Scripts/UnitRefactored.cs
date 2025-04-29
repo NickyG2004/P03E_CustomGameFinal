@@ -1,70 +1,66 @@
+// -----------------------------------------------------------------------------
+// UnitRefactored.cs
+// -----------------------------------------------------------------------------
+// Represents any battle unit; interfaces with StatsCalculator & HealthComponent.
+// -----------------------------------------------------------------------------
 using UnityEngine;
 
-
-// Require Components to ensure they are attached to the GameObject
-[RequireComponent(typeof(StatsCalculator))]
-[RequireComponent(typeof(HealthComponent))]
-
+[RequireComponent(typeof(StatsCalculator), typeof(HealthComponent))]
 public class UnitRefactored : MonoBehaviour
 {
-    [Header("DebugMode")]
-    public bool debugMode = false;
+    #region Serialized Fields
+    [Header("Identity")] public string unitName;
+    [Tooltip("Starting level of this unit")] public int unitLevel = 1;
+    #endregion
 
-    [Header("Identity")]
-    public string unitName;
-    public int unitLevel = 1;
+    #region Private Fields
+    private StatsCalculator _statsCalc;
+    private HealthComponent _healthComp;
+    private int _damageValue;
+    #endregion
 
-    StatsCalculator statsCalc;
-    HealthComponent healthComp;
-    int damageStat;
-
-    void Awake()
+    #region Unity Callbacks
+    private void Awake()
     {
-        statsCalc = GetComponent<StatsCalculator>();
-        healthComp = GetComponent<HealthComponent>();
-        RecalculateStats();
-        healthComp.Initialize(maxHP);  // full heal at start
+        _statsCalc = GetComponent<StatsCalculator>();
+        _healthComp = GetComponent<HealthComponent>();
+        InitializeStats();
+        _healthComp.Initialize(_healthComp.maxHP);
     }
+    #endregion
 
+    #region Public API
+    public void InitializeLevel(int level)
+    {
+        unitLevel = Mathf.Max(1, level);
+        InitializeStats();
+        _healthComp.Initialize(_healthComp.maxHP);
+    }
 
     public void LevelUp(int levels = 1)
     {
-        // 1) remember old max
-        int oldMax = healthComp.maxHP;
-
-        // 2) bump level and recalc stats (RecalculateStats calls SetMaxHP internally)
+        int oldMax = _healthComp.maxHP;
         unitLevel = Mathf.Max(1, unitLevel + levels);
-        RecalculateStats();
-
-        // 3) heal only the difference in max HP
-        int diff = healthComp.maxHP - oldMax;
-        if (diff > 0)
-            healthComp.Heal(diff);
+        InitializeStats();
+        int gain = _healthComp.maxHP - oldMax;
+        if (gain > 0) _healthComp.Heal(gain);
+        SaveManager.PlayerLevel = unitLevel;
     }
 
-    void RecalculateStats()
+    public bool TakeDamage(int dmg) => _healthComp.TakeDamage(dmg);
+    public void Heal(int amt) => _healthComp.Heal(amt);
+
+    public int maxHP => _healthComp.maxHP;
+    public int currentHP => _healthComp.currentHP;
+    public int damage => _damageValue;
+    #endregion
+
+    #region Helpers
+    private void InitializeStats()
     {
-        statsCalc.CalculateStats(unitLevel, out int hp, out int dmg);
-        healthComp.SetMaxHP(hp);
-        damageStat = dmg;
+        _statsCalc.CalculateStats(unitLevel, out int hp, out int dmg);
+        _healthComp.SetMaxHP(hp);
+        _damageValue = dmg;
     }
-
-    public void InitializeLevel(int level)
-    {
-        // clamp to at least 1
-        unitLevel = Mathf.Max(1, level);
-
-        // recalc stats & heal to full
-        RecalculateStats();
-        healthComp.Initialize(maxHP);
-    }
-
-
-    public bool TakeDamage(int dmg) { return healthComp.TakeDamage(dmg); }
-    public void Heal(int amt) { healthComp.Heal(amt); }
-
-    // Exposed for HUD reads:
-    public int maxHP => healthComp.maxHP;
-    public int currentHP => healthComp.currentHP;
-    public int damage => damageStat;
+    #endregion
 }

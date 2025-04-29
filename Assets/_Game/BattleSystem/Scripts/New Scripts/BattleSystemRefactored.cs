@@ -1,210 +1,246 @@
-// Summary of Script and functions
-
+// -----------------------------------------------------------------------------
+// BattleSystemRefactored.cs
+// -----------------------------------------------------------------------------
+// Core controller for the turn-based battle: handles instantiation of units,
+// turn sequencing (player, enemy), win/lose detection, level scaling,
+// and smooth transitions to win/lose menus using ScreenFader & MenuSystemRefactored.
+// Integrated with SaveManager for persistent player/enemy levels.
+// -----------------------------------------------------------------------------
 using System;
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
 using TMPro;
 
+/// <summary>
+/// Represents the state of the battle progression.
+/// </summary>
 public enum BattleState { START, PLAYERTURN, ENEMYTURN, WON, LOST, NEXTMENU }
 
 public class BattleSystemRefactored : MonoBehaviour
 {
-    [Header("Debug")]
-    public bool debugMode = false; // Needs to stay public
-
+    #region Serialized Fields
     [Header("Prefabs & Stations")]
-    public GameObject playerPrefab;
-    public GameObject enemyPrefab;
-    public Transform playerBattleStation;
-    public Transform enemyBattleStation;
+    [Tooltip("Player unit prefab")]
+    [SerializeField] private GameObject playerPrefab;
+    [Tooltip("Enemy unit prefab")]
+    [SerializeField] private GameObject enemyPrefab;
+    [Tooltip("Transform where player appears")]
+    [SerializeField] private Transform playerBattleStation;
+    [Tooltip("Transform where enemy appears")]
+    [SerializeField] private Transform enemyBattleStation;
 
     [Header("UI References")]
-    public TextMeshProUGUI dialogueText;
-    public BattleHUDRefactored playerHUD;
-    public BattleHUDRefactored enemyHUD;
+    [Tooltip("Dialogue text for battle messages")]
+    [SerializeField] public TextMeshProUGUI dialogueText;
+    [Tooltip("Player HUD reference")]
+    [SerializeField] public BattleHUDRefactored playerHUD;
+    [Tooltip("Enemy HUD reference")]
+    [SerializeField] public BattleHUDRefactored enemyHUD;
 
-    [Header("End Battle Fade")]
+    [Header("Battle Timers & Values")]
+    [Tooltip("Delay before battle starts")]
+    [SerializeField] public float battleStartDelay = 2f;
+    [Tooltip("Delay between turns")]
+    [SerializeField] public float turnDelay = 2f;
+    [Tooltip("Delay for button feedback")]
+    [SerializeField] public float buttonDelay = 2f;
+    [Tooltip("Amount healed on heal action")]
+    [SerializeField] public int healAmount = 10;
+    [Tooltip("Levels gained on win")]
+    [SerializeField] public int levelUpAmount = 1;
+
+    [Header("End-Battle Fade")]
+    [Tooltip("Duration to fade to black and back when showing menus")]
     [SerializeField] private float endFadeDuration = 1f;
+    #endregion
+
+    #region Public Properties
+    /// <summary>Current battle state (player/enemy turn, win, lose).</summary>
+    public BattleState state { get; set; }
+
+    /// <summary>Reference to the player Unit instance.</summary>
+    public UnitRefactored playerUnit { get; private set; }
+
+    /// <summary>Reference to the enemy Unit instance.</summary>
+    public UnitRefactored enemyUnit { get; private set; }
+    #endregion
+
+    #region Private Fields
+    private MenuSystemRefactored _menuSystem;
     private ScreenFader _screenFader;
+    private int _savedPlayerLevel;
+    private int _savedEnemyLevel;
+    #endregion
 
-    [Header("Battle Settings")]
-    public float battleStartDelay = 2f;
-    public float turnDelay = 2f;
-    public float buttonDelay = 2f;
-
-    [Header("Heal & Level Up")]
-    public int healAmount = 10;
-    public int levelUpAmount = 1;
-
-    [Header("Menus")]
-    public MenuSystemRefactored menuSystem;
-
-    // Public so BattleActions can access:
-    public BattleState state; // Needs to stay public
-    public UnitRefactored playerUnit; // Needs to stay public
-    public UnitRefactored enemyUnit; // Needs to stay public
-
-    // Private variables for saving player and enemy levels
-    private int _savedPlayerLevel = 1;
-    private int _savedEnemyLevel = 1;
-
-    void Awake()
+    #region Unity Callbacks
+    private void Awake()
     {
-        // Load whatever was last saved (defaults to 1)
-        _savedPlayerLevel = PlayerPrefs.GetInt("PlayerLevel", 1);
-        _savedEnemyLevel = PlayerPrefs.GetInt("EnemyLevel", 1);
+        // Load persistent levels (default to 1)
+        _savedPlayerLevel = SaveManager.PlayerLevel;
+        _savedEnemyLevel = SaveManager.EnemyLevel;
 
-        // Grab the fader (even if it's initially inactive)
+        // Cache MenuSystem and ScreenFader (handles inactive)
+        _menuSystem = FindFirstObjectByType<MenuSystemRefactored>(FindObjectsInactive.Include);
         _screenFader = FindFirstObjectByType<ScreenFader>(FindObjectsInactive.Include);
     }
 
-    void Start()
+    private void Start()
     {
-        if (debugMode) Debug.Log("BattleSystemRefactored: Initialized");
-
-        // Initialize the battle system
+        // Begin the battle flow
         StartBattle();
     }
+    #endregion
 
+    #region Public API
+    /// <summary>Initiate a new battle: resets state and begins setup coroutine.</summary>
     public void StartBattle()
     {
-        if (debugMode) Debug.Log("BattleSystemRefactored: Starting battle");
-
-        // Reset the state and prepare for a new battle
         state = BattleState.START;
         StartCoroutine(SetUpBattle());
     }
 
-    IEnumerator SetUpBattle()
-    {
-        if (debugMode) Debug.Log("BattleSystemRefactored: Setting up battle");
-
-        // instantiate player
-        GameObject pGO = Instantiate(playerPrefab, playerBattleStation);
-        playerUnit = pGO.GetComponent<UnitRefactored>();
-        // **apply saved level before anything else**
-        playerUnit.InitializeLevel(_savedPlayerLevel);
-
-        // instantiate enemy
-        GameObject eGO = Instantiate(enemyPrefab, enemyBattleStation);
-        enemyUnit = eGO.GetComponent<UnitRefactored>();
-        // **apply saved enemy level**
-        enemyUnit.InitializeLevel(_savedEnemyLevel);
-
-        // now the HUD will show the correct levels
-        dialogueText.text = "A wild " + enemyUnit.unitName + " appeared!";
-        playerHUD.SetHUD(playerUnit);
-        enemyHUD.SetHUD(enemyUnit);
-
-        yield return new WaitForSeconds(battleStartDelay);
-
-        state = BattleState.PLAYERTURN;
-        PlayerTurn();
-    }
-
+    /// <summary> Precents text on the players.</summary>
     public void PlayerTurn()
     {
-        if (debugMode) Debug.Log("BattleSystemRefactored: Player's turn");
-
-        // Display the player's options
+        state = BattleState.PLAYERTURN;
         dialogueText.text = "Choose an action:";
     }
 
-    // Attack, Heal and enemyTurn coroutines -> moved to BattleActionsRefactored.cs
 
-    /// <summary>Called by BattleActionsRefactored when the fight ends or a turn completes.</summary>
+    /// <summary>Called to end the battle: triggers fade & appropriate menu.</summary>
     public void EndBattle()
     {
-        if (debugMode) Debug.Log("BattleSystemRefactored: Ending battle");
+        // Decide which menu to show
+        Action showMenu = state == BattleState.WON
+            ? _menuSystem.ShowWinMenu
+            : _menuSystem.ShowLoseMenu;
 
-        // Check the battle state and update the dialogue text accordingly
+        // Update persistent level for player win
         if (state == BattleState.WON)
         {
-            // Player wins the battle
-
-            // Level up the player and enemy units
-            dialogueText.text = "You Won the Battle!!!";
-            playerUnit.LevelUp(levelUpAmount);
-            enemyUnit.LevelUp(UnityEngine.Random.Range(1, 3));
-
-            // Save the player and enemy levels
-            _savedPlayerLevel = playerUnit.unitLevel;
-            _savedEnemyLevel = enemyUnit.unitLevel;
-
-            // Update the HUDs
-            playerHUD.SetHUD(playerUnit);
-            enemyHUD.SetHUD(enemyUnit);
-
-            // Show the win menu
-            if (menuSystem != null)
-                // Fade -> win menu -> unfade
-                StartCoroutine(FadeToMenu(menuSystem.ShowWinMenu));
-            else
-                Debug.LogWarning("MenuSystemRefactored not assigned.");
-
-            //// Play win sound
-            // implement win sound logic here
-
-            //// Play win music
-            // implement win music logic here
+            SaveManager.PlayerLevel = playerUnit.unitLevel;
+            SaveManager.EnemyLevel = enemyUnit.unitLevel;
         }
-        else if (state == BattleState.LOST)
-        {
-            // Player loses the battle
 
-            // Display lose text (optional)
-            dialogueText.text = "You Lost the Battle...";
+        // Start fade sequence then menu display
+        StartCoroutine(FadeToMenu(showMenu));
+    }
+    #endregion
 
-            // you may want to still record the final player level as a high score
-            PlayerPrefs.SetInt("BestLevel", playerUnit.unitLevel);
+    #region Coroutines
+    private IEnumerator SetUpBattle()
+    {
+        // Instantiate and initialize player
+        var pGO = Instantiate(playerPrefab, playerBattleStation);
+        playerUnit = pGO.GetComponent<UnitRefactored>();
+        playerUnit.InitializeLevel(_savedPlayerLevel);
 
-            // Show lose menu
-            if (menuSystem != null)
-                // Fade -> lose menu -> unfade
-                StartCoroutine(FadeToMenu(menuSystem.ShowLoseMenu));
-            else if (debugMode)
-                Debug.LogWarning("BattleSystemRefactored: MenuSystemRefactored not assigned.");
+        // Instantiate and initialize enemy
+        var eGO = Instantiate(enemyPrefab, enemyBattleStation);
+        enemyUnit = eGO.GetComponent<UnitRefactored>();
+        enemyUnit.InitializeLevel(_savedEnemyLevel);
 
-            //// Play lose sound
-            // implement lose sound logic here
+        // Update HUDs and intro text
+        playerHUD.SetHUD(playerUnit);
+        enemyHUD.SetHUD(enemyUnit);
+        yield return ShowDialog($"A wild {enemyUnit.unitName} appeared!");
 
-            //// Play lose music
-            // implement lose music logic here
-
-        }
+        // Begin player turn
+        state = BattleState.PLAYERTURN;
+        ShowDialog("Choose an action:");
     }
 
-    /// <summary>
-    /// Fade the screen to black, invoke the given menu show action,
-    /// then fade back to transparent so the menu is revealed.
-    /// </summary>
     private IEnumerator FadeToMenu(Action showMenu)
     {
         if (_screenFader != null)
         {
-            var cg = _screenFader.GetComponent<CanvasGroup>();
-
-            // Ensure the black panel is active & intercepting
+            // Enable and block input
             _screenFader.gameObject.SetActive(true);
+            var cg = _screenFader.GetComponent<CanvasGroup>();
             cg.blocksRaycasts = true;
 
-            // 1) Fade to black (transparent -> black)
+            // Fade to black
             yield return UIFader.FadeInCanvasGroup(cg, endFadeDuration);
 
-            // 2) Trigger the menu UI
+            // Invoke menu UI
             showMenu();
 
-            // 3) Fade back to transparent (black -> transparent)
+            // Fade back in
             yield return UIFader.FadeOutCanvasGroup(cg, endFadeDuration);
 
-            // 4) Allow clicks through and hide panel
+            // Unblock and hide fader
             cg.blocksRaycasts = false;
             _screenFader.gameObject.SetActive(false);
         }
         else
         {
-            // Fallback if no fader found
             showMenu();
         }
     }
+    #endregion
+
+    #region Battle Flow Coroutines
+    /// <summary>Handles the player attack action and transitions.</summary>
+    public IEnumerator PlayerAttack()
+    {
+        // Damage enemy
+        bool enemyDead = enemyUnit.TakeDamage(playerUnit.damage);
+        enemyHUD.SetHP(enemyUnit.currentHP);
+        yield return ShowDialog("Attack successful!");
+
+        if (enemyDead)
+        {
+            state = BattleState.WON;
+            yield return new WaitForSeconds(turnDelay);
+            EndBattle();
+        }
+        else
+        {
+            state = BattleState.ENEMYTURN;
+            yield return EnemyTurn();
+        }
+    }
+
+    /// <summary>Handles the player heal action and transitions.</summary>
+    public IEnumerator PlayerHeal()
+    {
+        yield return ShowDialog("Healing...");
+        playerUnit.Heal(healAmount);
+        playerHUD.SetHP(playerUnit.currentHP);
+        yield return ShowDialog($"Healed for {healAmount} HP!");
+        state = BattleState.ENEMYTURN;
+        yield return EnemyTurn();
+    }
+
+    /// <summary>Enemy's automated turn behavior.</summary>
+    private IEnumerator EnemyTurn()
+    {
+        yield return ShowDialog($"{enemyUnit.unitName} attacks!");
+        bool playerDead = playerUnit.TakeDamage(enemyUnit.damage);
+        playerHUD.SetHP(playerUnit.currentHP);
+
+        if (playerDead)
+        {
+            state = BattleState.LOST;
+            yield return new WaitForSeconds(turnDelay);
+            EndBattle();
+        }
+        else
+        {
+            state = BattleState.PLAYERTURN;
+            yield return ShowDialog("Your turn!");
+        }
+    }
+    #endregion
+
+    #region Helper Methods
+    /// <summary>
+    /// Displays a dialogue message and waits a standard delay.
+    /// </summary>
+    private IEnumerator ShowDialog(string message)
+    {
+        dialogueText.text = message;
+        yield return new WaitForSeconds(buttonDelay);
+    }
+    #endregion
 }

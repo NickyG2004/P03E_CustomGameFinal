@@ -1,87 +1,95 @@
+// -----------------------------------------------------------------------------
+// MusicPlayer.cs
+// -----------------------------------------------------------------------------
+// Handles playing and crossfading individual AudioClips via an AudioSource.
+// -----------------------------------------------------------------------------
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-
+[RequireComponent(typeof(AudioSource))]
 public class MusicPlayer : MonoBehaviour
 {
-    private AudioSource _audioSource;
-    private Coroutine _lerpVolumeRoutine = null;
-    private Coroutine _stopRouine = null;
+    #region Serialized Fields
+    [Tooltip("Duration of fade transitions for music tracks")]
+    [SerializeField] private float fadeDuration;
+    #endregion
 
+    #region Private Fields
+    private AudioSource _audioSource;    // Local AudioSource component
+    private Coroutine _fadeRoutine;      // Reference to active fade coroutine
+    #endregion
+
+    #region Unity Callbacks
     private void Awake()
     {
-        // setup audio source
-        _audioSource = gameObject.AddComponent<AudioSource>();
+        // Cache the AudioSource and ensure looping for continuous music
+        _audioSource = GetComponent<AudioSource>();
         _audioSource.loop = true;
-        _audioSource.playOnAwake = false;
     }
+    #endregion
 
-    public void Play(AudioClip musicTrack, float fadeTime)
+    #region Public API
+    /// <summary>
+    /// Crossfade from any currently playing track to the specified clip.
+    /// </summary>
+    public void Play(AudioClip clip, float fadeTime)
     {
-        // could add safty check later like if (_audioSource.isPlaying) return;
-
-        // start at zero volume and fade up
-        _audioSource.volume = 0;
-        _audioSource.clip = musicTrack;
-        _audioSource.Play();
-
-        // FadeVolume(MusicManager.Instance.Volume, fadeTime);
-        FadeVolume(0.15f, fadeTime);
+        if (clip == null || _audioSource.clip == clip) return;
+        // Stop existing fade if in progress
+        if (_fadeRoutine != null) StopCoroutine(_fadeRoutine);
+        // Begin crossfade sequence
+        _fadeRoutine = StartCoroutine(FadeToNewClip(clip, fadeTime));
     }
 
+    /// <summary>
+    /// Fade out and stop current track.
+    /// </summary>
     public void Stop(float fadeTime)
     {
-        // reset if it's already going
-        if (_stopRouine != null)
-        {
-            StopCoroutine(_stopRouine);
-        }
-        _stopRouine = StartCoroutine(StopRoutine(fadeTime));
+        if (_audioSource.clip == null) return;
+        if (_fadeRoutine != null) StopCoroutine(_fadeRoutine);
+        _fadeRoutine = StartCoroutine(FadeOutRoutine(fadeTime));
+    }
+    #endregion
+
+    #region Coroutines
+    private IEnumerator FadeToNewClip(AudioClip newClip, float duration)
+    {
+        // 1) Fade out current audio
+        yield return FadeOutRoutine(duration);
+        // 2) Switch clip and start playing
+        _audioSource.clip = newClip;
+        _audioSource.Play();
+        // 3) Fade in to full volume
+        yield return FadeInRoutine(duration);
     }
 
-    public void FadeVolume(float targetVolume, float fadeTime)
+    private IEnumerator FadeOutRoutine(float duration)
     {
-        targetVolume = Mathf.Clamp(targetVolume, 0, 1);
-        if (fadeTime < 0)
+        float startVol = _audioSource.volume;
+        float elapsed = 0f;
+        while (elapsed < duration)
         {
-            fadeTime = 0;
-        }
-
-        if (_lerpVolumeRoutine != null)
-        {
-            StopCoroutine(_lerpVolumeRoutine);
-        }
-
-        _lerpVolumeRoutine = StartCoroutine(LerpVolumeRoutine(targetVolume, fadeTime));
-    }
-
-    private IEnumerator LerpVolumeRoutine(float targetVolume, float fadeTime)
-    {
-        float newVolume;
-        float startVolume = _audioSource.volume;
-        for (float elapsedTime = 0; elapsedTime <= fadeTime; elapsedTime += Time.deltaTime)
-        {
-            newVolume = Mathf.Lerp(startVolume, targetVolume, elapsedTime / fadeTime);
-            _audioSource.volume = newVolume;
+            elapsed += Time.deltaTime;
+            _audioSource.volume = Mathf.Lerp(startVol, 0f, elapsed / duration);
             yield return null;
         }
-        // ensure volume is set to target value
-        _audioSource.volume = targetVolume;
-    }
-
-    private IEnumerator StopRoutine(float fadeTime)
-    {
-        // stop any fade in progress
-        if (_lerpVolumeRoutine != null)
-        {
-            StopCoroutine(_lerpVolumeRoutine);
-        }
-
-        _lerpVolumeRoutine = StartCoroutine(LerpVolumeRoutine(0, fadeTime));
-
-        // wait for blend to finish
-        yield return _lerpVolumeRoutine;
+        _audioSource.volume = 0f;
         _audioSource.Stop();
     }
+
+    private IEnumerator FadeInRoutine(float duration)
+    {
+        // Ensure playback is started before raising volume
+        _audioSource.Play();
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            _audioSource.volume = Mathf.Lerp(0f, 1f, elapsed / duration);
+            yield return null;
+        }
+        _audioSource.volume = 1f;
+    }
+    #endregion
 }

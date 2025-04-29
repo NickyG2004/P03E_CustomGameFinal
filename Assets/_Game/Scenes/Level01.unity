@@ -289,7 +289,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6833089805355be449f823128c362cf9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debugMode: 0
   playerPrefab: {fileID: 1074099462469984375, guid: 2e0c200b2b5f528458a8d68afc17698f, type: 3}
   enemyPrefab: {fileID: 4626300669077577570, guid: aba4bef0d19cede4ca0708767a4dbffe, type: 3}
   playerBattleStation: {fileID: 1333734399}
@@ -297,16 +296,12 @@ MonoBehaviour:
   dialogueText: {fileID: 1010811452}
   playerHUD: {fileID: 1298802699}
   enemyHUD: {fileID: 1852361053}
-  endFadeDuration: 1.5
   battleStartDelay: 2
   turnDelay: 2
   buttonDelay: 2
   healAmount: 10
   levelUpAmount: 1
-  menuSystem: {fileID: 852482656}
-  state: 0
-  playerUnit: {fileID: 0}
-  enemyUnit: {fileID: 0}
+  endFadeDuration: 1.5
 --- !u!4 &79349229
 Transform:
   m_ObjectHideFlags: 0
@@ -1927,14 +1922,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22def704ba02c0f4d9435174972b9540, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debugMode: 0
-  mainMenuSceneName: MainMenu
   battleUI: {fileID: 1204950005}
   winMenu: {fileID: 298011508}
   loseMenu: {fileID: 61155044}
-  winMenuFadeTime: 1.5
-  battleUiFadeTime: 1.5
-  loseMenuFadeTime: 1.5
+  menuFadeDuration: 1.5
+  mainMenuSceneName: MainMenu
   battleSystem: {fileID: 79349228}
 --- !u!4 &852482657
 Transform:

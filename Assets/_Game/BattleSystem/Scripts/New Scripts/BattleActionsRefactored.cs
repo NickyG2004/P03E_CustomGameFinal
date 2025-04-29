@@ -1,81 +1,71 @@
-using UnityEngine;
+// -----------------------------------------------------------------------------
+// BattleActionsRefactored.cs
+// -----------------------------------------------------------------------------
+// Implements the core battle coroutines: PlayerAttack, PlayerHeal, EnemyTurn.
+// -----------------------------------------------------------------------------
 using System.Collections;
+using UnityEngine;
 
-// Reqired to use the BattleSystemRefactored
 [RequireComponent(typeof(BattleSystemRefactored))]
 public class BattleActionsRefactored : MonoBehaviour
 {
-    BattleSystemRefactored bs;
+    private BattleSystemRefactored _bs;
 
-    void Awake() => bs = GetComponent<BattleSystemRefactored>();
+    private void Awake() => _bs = GetComponent<BattleSystemRefactored>();
 
     public IEnumerator PlayerAttack()
     {
-        if (bs.debugMode) Debug.Log("Player attacking enemy");
-
-        bool isDead = bs.enemyUnit.TakeDamage(bs.playerUnit.damage);
-        bs.enemyHUD.SetHP(bs.enemyUnit.currentHP);
-        bs.dialogueText.text = "The Attack was Successful!";
-        yield return new WaitForSeconds(bs.buttonDelay);
+        // Damage enemy and update HUD/text
+        bool isDead = _bs.enemyUnit.TakeDamage(_bs.playerUnit.damage);
+        _bs.enemyHUD.SetHP(_bs.enemyUnit.currentHP);
+        _bs.dialogueText.text = "Attack successful!";
+        yield return new WaitForSeconds(_bs.buttonDelay);
 
         if (isDead)
         {
-            if (bs.debugMode) Debug.Log("Enemy defeated");
-            bs.dialogueText.text = bs.enemyUnit.unitName + " has been defeated!";
-            bs.state = BattleState.WON;
-            yield return new WaitForSeconds(bs.turnDelay);
-            bs.EndBattle();
+            _bs.state = BattleState.WON;
+            yield return new WaitForSeconds(_bs.turnDelay);
+            _bs.EndBattle();
         }
         else
         {
-            if (bs.debugMode) Debug.Log($"Enemy HP = {bs.enemyUnit.currentHP}");
-            bs.state = BattleState.ENEMYTURN;
-            bs.dialogueText.text = "Enemy's turn!";
-            yield return new WaitForSeconds(bs.turnDelay);
-            StartCoroutine(EnemyTurn());
+            _bs.state = BattleState.ENEMYTURN;
+            yield return new WaitForSeconds(_bs.turnDelay);
+            yield return StartCoroutine(EnemyTurn());
         }
     }
 
     public IEnumerator PlayerHeal()
     {
-        if (bs.debugMode) Debug.Log("Player healing");
-        bs.dialogueText.text = "Healing...";
-        yield return new WaitForSeconds(bs.buttonDelay);
-
-        bs.playerUnit.Heal(bs.healAmount);
-        bs.playerHUD.SetHP(bs.playerUnit.currentHP);
-        bs.dialogueText.text = $"You healed for {bs.healAmount} HP!";
-        yield return new WaitForSeconds(bs.turnDelay);
-
-        bs.state = BattleState.ENEMYTURN;
-        StartCoroutine(EnemyTurn());
+        _bs.dialogueText.text = "Healing...";
+        yield return new WaitForSeconds(_bs.buttonDelay);
+        _bs.playerUnit.Heal(_bs.healAmount);
+        _bs.playerHUD.SetHP(_bs.playerUnit.currentHP);
+        _bs.dialogueText.text = $"Healed for {_bs.healAmount} HP!";
+        yield return new WaitForSeconds(_bs.turnDelay);
+        yield return StartCoroutine(EnemyTurn());
     }
 
-    IEnumerator EnemyTurn()
+    private IEnumerator EnemyTurn()
     {
-        if (bs.debugMode) Debug.Log("Enemy's turn");
-        bs.dialogueText.text = bs.enemyUnit.unitName + " is attacking!";
-        yield return new WaitForSeconds(bs.buttonDelay);
-
-        bool isDead = bs.playerUnit.TakeDamage(bs.enemyUnit.damage);
-        bs.playerHUD.SetHP(bs.playerUnit.currentHP);
-        yield return new WaitForSeconds(bs.buttonDelay);
+        _bs.dialogueText.text = _bs.enemyUnit.unitName + " attacks!";
+        yield return new WaitForSeconds(_bs.buttonDelay);
+        bool isDead = _bs.playerUnit.TakeDamage(_bs.enemyUnit.damage);
+        _bs.playerHUD.SetHP(_bs.playerUnit.currentHP);
+        yield return new WaitForSeconds(_bs.buttonDelay);
 
         if (isDead)
         {
-            if (bs.debugMode) Debug.Log("Player defeated");
-            bs.dialogueText.text = "You have been defeated!";
-            bs.state = BattleState.LOST;
-            yield return new WaitForSeconds(bs.turnDelay);
-            bs.EndBattle();
+            _bs.state = BattleState.LOST;
+            yield return new WaitForSeconds(_bs.turnDelay);
+            _bs.EndBattle();
         }
         else
         {
-            if (bs.debugMode) Debug.Log($"Player HP = {bs.playerUnit.currentHP}");
-            bs.state = BattleState.PLAYERTURN;
-            bs.dialogueText.text = "Your turn!";
-            yield return new WaitForSeconds(bs.turnDelay);
-            bs.PlayerTurn();
+            _bs.state = BattleState.PLAYERTURN;
+            _bs.dialogueText.text = "Your turn!";
+            yield return new WaitForSeconds(_bs.turnDelay);
+            _bs.PlayerTurn();
         }
     }
 }

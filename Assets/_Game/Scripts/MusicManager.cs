@@ -1,125 +1,85 @@
+// -----------------------------------------------------------------------------
+// MusicManager.cs
+// -----------------------------------------------------------------------------
+// Singleton coordinating two MusicPlayer instances for seamless track transitions.
+// -----------------------------------------------------------------------------
 using UnityEngine;
 
 public class MusicManager : MonoBehaviour
 {
-    public bool debugMode = false;
-    public bool debugWarningMode = true;
-
-    private MusicPlayer _musicPlayer_01;
-    private MusicPlayer _musicPlayer_02;
-    private MusicPlayer _activeMusicPlayer = null;
-
-    private float _volume = 1f;
-    public float Volume
-    {
-        get => _volume;
-        private set
-        {
-            value = Mathf.Clamp(value, 0, 1);
-            _volume = value;
-        }
-    }
-
-    private AudioClip _activeMusicTrack = null;
-
-    // Singleton pattern
+    #region Singleton
     private static MusicManager _instance;
     public static MusicManager Instance
     {
         get
         {
-            // laxy instantiation
             if (_instance == null)
             {
-                _instance = FindAnyObjectByType<MusicManager>();
+                _instance = FindFirstObjectByType<MusicManager>();
                 if (_instance == null)
                 {
-                    GameObject singletonGO = new GameObject("MusicManager_Singleton");
-                    _instance = singletonGO.AddComponent<MusicManager>();
-                    DontDestroyOnLoad(singletonGO);
+                    var go = new GameObject("MusicManager");
+                    _instance = go.AddComponent<MusicManager>();
+                    DontDestroyOnLoad(go);
                 }
             }
             return _instance;
         }
     }
+    #endregion
 
+    #region Serialized Fields
+    [Tooltip("Enable verbose logging for debugging music actions")]
+    public bool debugMode = false;
+    #endregion
+
+    #region Private Fields
+    private MusicPlayer _playerA;
+    private MusicPlayer _playerB;
+    private MusicPlayer _activePlayer;
+    private AudioClip _currentClip;
+    #endregion
+
+    #region Unity Callbacks
     private void Awake()
     {
-        // enforce singleton pattern
+        // Enforce singleton uniqueness
         if (_instance != null && _instance != this)
         {
             Destroy(gameObject);
             return;
         }
-
-        // This is singleton instance
-        SetupMusicPlayers();
-
+        _instance = this;
+        DontDestroyOnLoad(gameObject);
+        // Create two MusicPlayers for crossfading
+        _playerA = gameObject.AddComponent<MusicPlayer>();
+        _playerB = gameObject.AddComponent<MusicPlayer>();
+        _activePlayer = _playerA;
     }
+    #endregion
 
-    public void Play(AudioClip musicTrack, float fadeTime)
+    #region Public API
+    /// <summary>
+    /// Switch to a new music clip with crossfade.
+    /// </summary>
+    public void Play(AudioClip clip, float fadeTime)
     {
-        // guard clause
-        if (musicTrack == null)
-        {
-            if (debugWarningMode)
-                Debug.LogWarning("MusicManager: music track is null");
-            return;
-        }
-        if (musicTrack == _activeMusicTrack)
-        {
-            if (debugWarningMode)
-                Debug.LogWarning("MusicManager: music track is already playing");
-            return;
-        }
-
-        // stoping the current music player
-        if (_activeMusicTrack != null)
-        { 
-            _activeMusicPlayer.Stop(fadeTime);
-        }
-
-        // switch to new player while previous one is fading out
-        SwitchActiveMusicPlayer();
-        _activeMusicTrack = musicTrack;
-
-        // play the new music track (with fade up)
-        _activeMusicPlayer.Play(musicTrack, fadeTime);
-
+        if (clip == null || clip == _currentClip) return;
+        if (debugMode) Debug.Log($"MusicManager: Playing {clip.name}");
+        _activePlayer.Stop(fadeTime);
+        _activePlayer = (_activePlayer == _playerA) ? _playerB : _playerA;
+        _activePlayer.Play(clip, fadeTime);
+        _currentClip = clip;
     }
 
+    /// <summary>
+    /// Fade out and stop current music.
+    /// </summary>
     public void Stop(float fadeTime)
     {
-        // dont stop if no music is playing
-        if (_activeMusicTrack == null)
-        {
-            if (debugWarningMode)
-                Debug.LogWarning("MusicManager: no music is playing");
-            return;
-        }
-
-        // clear out active track and stop the player
-        _activeMusicTrack = null;
-        _activeMusicPlayer.Stop(fadeTime);
+        if (_currentClip == null) return;
+        _activePlayer.Stop(fadeTime);
+        _currentClip = null;
     }
-
-    private void SetupMusicPlayers()
-    {
-        _musicPlayer_01 = gameObject.AddComponent<MusicPlayer>();
-        _musicPlayer_02 = gameObject.AddComponent<MusicPlayer>();
-        // choose a starting 'active' music player 
-        _activeMusicPlayer = _musicPlayer_01;
-    }
-
-    private void SwitchActiveMusicPlayer()
-    {
-        if (_activeMusicPlayer == _musicPlayer_01)
-        {
-            _activeMusicPlayer = _musicPlayer_02;
-        }
-        else if (_activeMusicPlayer == _musicPlayer_02)
-        {
-            _activeMusicPlayer = _musicPlayer_01;
-        }
-    }
+    #endregion
 }

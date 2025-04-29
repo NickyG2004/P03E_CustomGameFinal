@@ -423,9 +423,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1fb6c96e9e41d3841986b4dac5b94fd4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debugMode: 1
-  _starLevelName: Level01
-  _levelSong: {fileID: 8300000, guid: 5915a8f2274a67b4fb20a07d805122ed, type: 3}
+  battleSceneName: Level01
+  levelSong: {fileID: 8300000, guid: 5e8ed54981e3dd64b913ccfb15729e8d, type: 3}
 --- !u!82 &373553320
 AudioSource:
   m_ObjectHideFlags: 0
@@ -653,7 +652,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 819735241}
-  - component: {fileID: 819735240}
+  - component: {fileID: 819735242}
   m_Layer: 0
   m_Name: AudioManager
   m_TagString: Untagged
@@ -661,19 +660,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &819735240
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 819735239}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ed764a481303ecc4ea20db70144d8c7c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _introSong: {fileID: 8300000, guid: 5e8ed54981e3dd64b913ccfb15729e8d, type: 3}
 --- !u!4 &819735241
 Transform:
   m_ObjectHideFlags: 0
@@ -689,6 +675,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &819735242
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 819735239}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81b01a880f5c48b429eacd9c6d4cdd62, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sfxVolume: 1
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,29 +1,38 @@
-using UnityEngine;
+// -----------------------------------------------------------------------------
+// UIFader.cs
+// -----------------------------------------------------------------------------
+// Static utility for fading arbitrary CanvasGroups in or out.
+// -----------------------------------------------------------------------------
 using System.Collections;
+using UnityEngine;
 
 public static class UIFader
 {
-    public static IEnumerator FadeInCanvasGroup(CanvasGroup canvasGroup, float duration)
+    /// <summary>Fade a CanvasGroup from current alpha to 1 (opaque).</summary>
+    public static IEnumerator FadeInCanvasGroup(CanvasGroup cg, float duration)
     {
-        float elapsed = 0f;
-        while (elapsed < duration)
+        float start = cg.alpha;
+        float t = 0f;
+        while (t < duration)
         {
-            elapsed += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Clamp01(elapsed / duration);
+            t += Time.deltaTime;
+            cg.alpha = Mathf.Lerp(start, 1f, t / duration);
             yield return null;
         }
-        canvasGroup.alpha = 1f;
+        cg.alpha = 1f;
     }
 
-    public static IEnumerator FadeOutCanvasGroup(CanvasGroup canvasGroup, float duration)
+    /// <summary>Fade a CanvasGroup from current alpha to 0 (transparent).</summary>
+    public static IEnumerator FadeOutCanvasGroup(CanvasGroup cg, float duration)
     {
-        float elapsed = 0f;
-        while (elapsed < duration)
+        float start = cg.alpha;
+        float t = 0f;
+        while (t < duration)
         {
-            elapsed += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Clamp01(1f - (elapsed / duration));
+            t += Time.deltaTime;
+            cg.alpha = Mathf.Lerp(start, 0f, t / duration);
             yield return null;
         }
-        canvasGroup.alpha = 0f;
+        cg.alpha = 0f;
     }
 }

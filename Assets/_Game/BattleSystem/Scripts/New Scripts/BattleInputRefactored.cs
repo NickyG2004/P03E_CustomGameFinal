@@ -1,28 +1,31 @@
+// -----------------------------------------------------------------------------
+// BattleInputRefactored.cs
+// -----------------------------------------------------------------------------
+// Routes UI button callbacks to BattleActionsRefactored methods.
+// -----------------------------------------------------------------------------
 using UnityEngine;
 
 [RequireComponent(typeof(BattleSystemRefactored), typeof(BattleActionsRefactored))]
 public class BattleInputRefactored : MonoBehaviour
 {
-    BattleSystemRefactored bs;
-    BattleActionsRefactored ba;
+    private BattleSystemRefactored _bs;
+    private BattleActionsRefactored _ba;
 
-    void Awake()
+    private void Awake()
     {
-        bs = GetComponent<BattleSystemRefactored>();
-        ba = GetComponent<BattleActionsRefactored>();
+        _bs = GetComponent<BattleSystemRefactored>();
+        _ba = GetComponent<BattleActionsRefactored>();
     }
 
     public void OnAttackButton()
     {
-        if (bs.debugMode) Debug.Log("Player chose to attack");
-        if (bs.state != BattleState.PLAYERTURN) return;
-        StartCoroutine(ba.PlayerAttack());
+        if (_bs.state != BattleState.PLAYERTURN) return;
+        StartCoroutine(_ba.PlayerAttack());
     }
 
     public void OnHealButton()
     {
-        if (bs.debugMode) Debug.Log("Player chose to heal");
-        if (bs.state != BattleState.PLAYERTURN) return;
-        StartCoroutine(ba.PlayerHeal());
+        if (_bs.state != BattleState.PLAYERTURN) return;
+        StartCoroutine(_ba.PlayerHeal());
     }
 }
