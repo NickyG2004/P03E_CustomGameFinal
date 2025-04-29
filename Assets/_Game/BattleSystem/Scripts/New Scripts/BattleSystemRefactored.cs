@@ -118,6 +118,10 @@ public class BattleSystemRefactored : MonoBehaviour
         // Update persistent level for player win
         if (state == BattleState.WON)
         {
+            playerUnit.LevelUp(levelUpAmount);
+            enemyUnit.LevelUp(UnityEngine.Random.Range(1, 3));
+            playerHUD.SetHUD(playerUnit);
+            enemyHUD.SetHUD(enemyUnit);
             SaveManager.PlayerLevel = playerUnit.unitLevel;
             SaveManager.EnemyLevel = enemyUnit.unitLevel;
         }
@@ -133,12 +137,12 @@ public class BattleSystemRefactored : MonoBehaviour
         // Instantiate and initialize player
         var pGO = Instantiate(playerPrefab, playerBattleStation);
         playerUnit = pGO.GetComponent<UnitRefactored>();
-        playerUnit.InitializeLevel(_savedPlayerLevel);
+        playerUnit.InitializeLevel(SaveManager.PlayerLevel);
 
         // Instantiate and initialize enemy
         var eGO = Instantiate(enemyPrefab, enemyBattleStation);
         enemyUnit = eGO.GetComponent<UnitRefactored>();
-        enemyUnit.InitializeLevel(_savedEnemyLevel);
+        enemyUnit.InitializeLevel(SaveManager.EnemyLevel);
 
         // Update HUDs and intro text
         playerHUD.SetHUD(playerUnit);
@@ -147,7 +151,7 @@ public class BattleSystemRefactored : MonoBehaviour
 
         // Begin player turn
         state = BattleState.PLAYERTURN;
-        ShowDialog("Choose an action:");
+        yield return ShowDialog("Choose an action:");
     }
 
     private IEnumerator FadeToMenu(Action showMenu)

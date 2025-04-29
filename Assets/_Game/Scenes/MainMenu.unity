@@ -423,8 +423,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1fb6c96e9e41d3841986b4dac5b94fd4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  battleSceneName: Level01
-  levelSong: {fileID: 8300000, guid: 5e8ed54981e3dd64b913ccfb15729e8d, type: 3}
+  debugMode: 1
+  _battleSceneName: Level01
+  _levelSong: {fileID: 8300000, guid: 5915a8f2274a67b4fb20a07d805122ed, type: 3}
+  _menuMusicClip: {fileID: 8300000, guid: 5e8ed54981e3dd64b913ccfb15729e8d, type: 3}
+  _menuMusicFadeTime: 1.5
 --- !u!82 &373553320
 AudioSource:
   m_ObjectHideFlags: 0

@@ -3931,7 +3931,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 852482656}
         m_TargetAssemblyTypeName: MenuSystemRefactored, Assembly-CSharp
-        m_MethodName: SaveAndQuit
+        m_MethodName: OnWinMenuSaveAndQuit
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5462,7 +5462,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 852482656}
         m_TargetAssemblyTypeName: MenuSystemRefactored, Assembly-CSharp
-        m_MethodName: ReturnToMainMenuFromLose
+        m_MethodName: OnLoseMenuQuit
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

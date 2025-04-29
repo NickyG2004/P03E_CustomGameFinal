@@ -15,14 +15,24 @@ public static class SaveManager
     public static int PlayerLevel
     {
         get => PlayerPrefs.GetInt(PLAYER_LEVEL_KEY, 1);
-        set { PlayerPrefs.SetInt(PLAYER_LEVEL_KEY, value); PlayerPrefs.Save(); }
+        set
+        {
+            // clamp to at least 1
+            PlayerPrefs.SetInt(PLAYER_LEVEL_KEY, Mathf.Max(1, value));
+            PlayerPrefs.Save();
+        }
     }
 
     /// <summary>Current enemy level (default=1).</summary>
     public static int EnemyLevel
     {
         get => PlayerPrefs.GetInt(ENEMY_LEVEL_KEY, 1);
-        set { PlayerPrefs.SetInt(ENEMY_LEVEL_KEY, value); PlayerPrefs.Save(); }
+        set
+        {
+            // clamp to at least 1
+            PlayerPrefs.SetInt(ENEMY_LEVEL_KEY, Mathf.Max(1, value));
+            PlayerPrefs.Save();
+        }
     }
 
     /// <summary>Highest level ever reached (default=1).</summary>

@@ -37,8 +37,16 @@ public class MenuSystemRefactored : MonoBehaviour
     public void ShowLoseMenu() => SetMenuState(loseMenu, true);
     public void HideWinMenu() => StartCoroutine(TransitionBackToBattle(winMenu));
     public void HideLoseMenu() => StartCoroutine(TransitionBackToBattle(loseMenu));
-    public void ReturnToMainMenu() =>
-        StartCoroutine(TransitionToMainMenu());
+
+    public void OnLoseMenuQuit()
+    {
+        StartCoroutine(TransitionToMainMenu(wasLoss: true));
+    }
+
+    public void OnWinMenuSaveAndQuit()
+    {
+        StartCoroutine(TransitionToMainMenu(wasLoss: false));
+    }
     #endregion
 
     #region Helpers
@@ -50,17 +58,26 @@ public class MenuSystemRefactored : MonoBehaviour
         if (cg != null) cg.blocksRaycasts = enabled;
     }
 
+    /// <summary>
+    /// Handles re-entry to battle after win or loss.
+    /// </summary>
     private IEnumerator TransitionBackToBattle(Canvas menu)
     {
+        // If we're retrying after a loss, clear out any saved levels
+        if (menu == loseMenu)
+            SaveManager.ResetProgress();
+
         if (_screenFader != null)
         {
             var cg = _screenFader.GetComponent<CanvasGroup>();
             _screenFader.gameObject.SetActive(true);
             cg.blocksRaycasts = true;
             yield return UIFader.FadeInCanvasGroup(cg, menuFadeDuration);
+
             SetMenuState(menu, false);
             SetMenuState(battleUI, true);
             battleSystem.StartBattle();
+
             yield return UIFader.FadeOutCanvasGroup(cg, menuFadeDuration);
             cg.blocksRaycasts = false;
             _screenFader.gameObject.SetActive(false);
@@ -73,9 +90,13 @@ public class MenuSystemRefactored : MonoBehaviour
         }
     }
 
-    private IEnumerator TransitionToMainMenu()
+    private IEnumerator TransitionToMainMenu(bool wasLoss)
     {
-        SaveManager.ResetProgress();
+        // If we're returning to the main menu after a loss, clear out any saved levels
+        if (wasLoss)
+            SaveManager.ResetProgress();
+
+
         if (_screenFader != null)
         {
             var cg = _screenFader.GetComponent<CanvasGroup>();
