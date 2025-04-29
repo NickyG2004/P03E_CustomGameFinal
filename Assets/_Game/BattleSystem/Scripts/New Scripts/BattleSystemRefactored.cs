@@ -1,6 +1,6 @@
 // Summary of Script and functions
 
-
+using System;
 using UnityEngine;
 using System.Collections;
 using TMPro;
@@ -23,12 +23,16 @@ public class BattleSystemRefactored : MonoBehaviour
     public BattleHUDRefactored playerHUD;
     public BattleHUDRefactored enemyHUD;
 
+    [Header("End Battle Fade")]
+    [SerializeField] private float endFadeDuration = 1f;
+    private ScreenFader _screenFader;
+
     [Header("Battle Settings")]
     public float battleStartDelay = 2f;
     public float turnDelay = 2f;
     public float buttonDelay = 2f;
 
-    [Header("Heal & Level-Up")]
+    [Header("Heal & Level Up")]
     public int healAmount = 10;
     public int levelUpAmount = 1;
 
@@ -49,6 +53,9 @@ public class BattleSystemRefactored : MonoBehaviour
         // Load whatever was last saved (defaults to 1)
         _savedPlayerLevel = PlayerPrefs.GetInt("PlayerLevel", 1);
         _savedEnemyLevel = PlayerPrefs.GetInt("EnemyLevel", 1);
+
+        // Grab the fader (even if it's initially inactive)
+        _screenFader = FindFirstObjectByType<ScreenFader>(FindObjectsInactive.Include);
     }
 
     void Start()
@@ -118,7 +125,7 @@ public class BattleSystemRefactored : MonoBehaviour
             // Level up the player and enemy units
             dialogueText.text = "You Won the Battle!!!";
             playerUnit.LevelUp(levelUpAmount);
-            enemyUnit.LevelUp(Random.Range(1, 3));
+            enemyUnit.LevelUp(UnityEngine.Random.Range(1, 3));
 
             // Save the player and enemy levels
             _savedPlayerLevel = playerUnit.unitLevel;
@@ -130,7 +137,8 @@ public class BattleSystemRefactored : MonoBehaviour
 
             // Show the win menu
             if (menuSystem != null)
-                menuSystem.ShowWinMenu();
+                // Fade -> win menu -> unfade
+                StartCoroutine(FadeToMenu(menuSystem.ShowWinMenu));
             else
                 Debug.LogWarning("MenuSystemRefactored not assigned.");
 
@@ -152,7 +160,8 @@ public class BattleSystemRefactored : MonoBehaviour
 
             // Show lose menu
             if (menuSystem != null)
-                menuSystem.ShowLoseMenu();
+                // Fade -> lose menu -> unfade
+                StartCoroutine(FadeToMenu(menuSystem.ShowLoseMenu));
             else if (debugMode)
                 Debug.LogWarning("BattleSystemRefactored: MenuSystemRefactored not assigned.");
 
@@ -162,6 +171,40 @@ public class BattleSystemRefactored : MonoBehaviour
             //// Play lose music
             // implement lose music logic here
 
+        }
+    }
+
+    /// <summary>
+    /// Fade the screen to black, invoke the given menu show action,
+    /// then fade back to transparent so the menu is revealed.
+    /// </summary>
+    private IEnumerator FadeToMenu(Action showMenu)
+    {
+        if (_screenFader != null)
+        {
+            var cg = _screenFader.GetComponent<CanvasGroup>();
+
+            // Ensure the black panel is active & intercepting
+            _screenFader.gameObject.SetActive(true);
+            cg.blocksRaycasts = true;
+
+            // 1) Fade to black (transparent -> black)
+            yield return UIFader.FadeInCanvasGroup(cg, endFadeDuration);
+
+            // 2) Trigger the menu UI
+            showMenu();
+
+            // 3) Fade back to transparent (black -> transparent)
+            yield return UIFader.FadeOutCanvasGroup(cg, endFadeDuration);
+
+            // 4) Allow clicks through and hide panel
+            cg.blocksRaycasts = false;
+            _screenFader.gameObject.SetActive(false);
+        }
+        else
+        {
+            // Fallback if no fader found
+            showMenu();
         }
     }
 }

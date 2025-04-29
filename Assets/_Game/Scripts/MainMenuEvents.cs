@@ -29,6 +29,9 @@ public class MainMenuEvents : MonoBehaviour
 
     private AudioSource _audioSource;
 
+    // reference to the fader in this scene
+    private ScreenFader _fader;
+
     private void Awake()
     {
         _audioSource = GetComponent<AudioSource>();
@@ -78,6 +81,9 @@ public class MainMenuEvents : MonoBehaviour
         _menuButtons = _document.rootVisualElement.Query<Button>().ToList();
         foreach (var btn in _menuButtons)
             btn.RegisterCallback<ClickEvent>(OnAllButtonsClick);
+
+        // grab the fader once
+        _fader = FindFirstObjectByType<ScreenFader>();
     }
 
     private void OnDisable()
@@ -128,22 +134,25 @@ public class MainMenuEvents : MonoBehaviour
         PlayerPrefs.SetInt("EnemyLevel", 1);
         PlayerPrefs.Save();
 
-        // Play the level song
+        // play your music
         MusicManager.Instance.Play(_levelSong, 3f);
 
-        // Load the game after pressing the start button
-        SceneManager.LoadScene(_starLevelName);
+        // fade then load
+        if (_fader != null)
+            StartCoroutine(_fader.FadeOutAndLoad(_starLevelName));
+        else
+            SceneManager.LoadScene(_starLevelName);
     }
 
     private void OnContinueClick(ClickEvent evt)
     {
         if (debugMode) Debug.Log("MainMenu: Continue Game");
-
-        // Play the level song
         MusicManager.Instance.Play(_levelSong, 3f);
 
-        // Load the game after pressing the continue button
-        SceneManager.LoadScene(_starLevelName);
+        if (_fader != null)
+            StartCoroutine(_fader.FadeOutAndLoad(_starLevelName));
+        else
+            SceneManager.LoadScene(_starLevelName);
     }
 
     private void OnQuitButtonClick(ClickEvent evt)

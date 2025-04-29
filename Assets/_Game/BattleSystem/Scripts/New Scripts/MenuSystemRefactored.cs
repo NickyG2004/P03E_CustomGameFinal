@@ -13,6 +13,7 @@ public class MenuSystemRefactored : MonoBehaviour
     public Canvas winMenu;
     public Canvas loseMenu;
 
+
     [Header("Fade Times")]
     public float winMenuFadeTime = 1f;
     public float battleUiFadeTime = 1f;
@@ -70,7 +71,7 @@ public class MenuSystemRefactored : MonoBehaviour
         PlayerPrefs.SetInt("EnemyLevel", battleSystem.enemyUnit.unitLevel);
         PlayerPrefs.Save();
 
-        SceneManager.LoadScene(mainMenuSceneName);
+        StartCoroutine(DoFadeAndLoad(mainMenuSceneName));
     }
 
     // SHOW LOSE
@@ -126,6 +127,24 @@ public class MenuSystemRefactored : MonoBehaviour
     {
         PlayerPrefs.DeleteKey("PlayerLevel");
         PlayerPrefs.DeleteKey("EnemyLevel");
-        SceneManager.LoadScene(mainMenuSceneName);
+
+        StartCoroutine(DoFadeAndLoad(mainMenuSceneName));
+    }
+
+    /// <summary>
+    /// Shared helper to drive the fade and scene-change.
+    /// </summary>
+    private IEnumerator DoFadeAndLoad(string sceneName)
+    {
+        // this will search even inactive objects
+        ScreenFader fader = FindFirstObjectByType<ScreenFader>(FindObjectsInactive.Include);
+        if (fader != null)
+        {
+            yield return fader.FadeOutAndLoad(sceneName);
+        }
+        else
+        {
+            SceneManager.LoadScene(sceneName);
+        }
     }
 }
