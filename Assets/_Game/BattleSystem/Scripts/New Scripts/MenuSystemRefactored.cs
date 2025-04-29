@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using UnityEngine.SceneManagement;
+using System;            // for Action
 
 public class MenuSystemRefactored : MonoBehaviour
 {
@@ -19,6 +20,10 @@ public class MenuSystemRefactored : MonoBehaviour
     public float battleUiFadeTime = 1f;
     public float loseMenuFadeTime = 1f;
 
+    [Header("End Battle Fade")]
+    [SerializeField] private float endFadeDuration = 1f;
+    private ScreenFader _screenFader;
+
     [Header("BattleSystem Ref")]
     public BattleSystemRefactored battleSystem;
 
@@ -31,36 +36,59 @@ public class MenuSystemRefactored : MonoBehaviour
 
     }
 
+    private void Awake()
+    {
+        // Grab the fader (even if it's initially inactive)
+        _screenFader = FindFirstObjectByType<ScreenFader>(FindObjectsInactive.Include);
+    }
+
     public void ShowWinMenu()
     {
-        if (battleSystem.state != BattleState.WON) return;
+        // 1) disable the battle visuals right away
+        battleUI.enabled = false;
+        var battleCG = battleUI.GetComponent<CanvasGroup>();
+        if (battleCG != null)
+            battleCG.blocksRaycasts = false;
 
-        if (winMenu != null)
+        // 2) enable the win menu canvas so it's ready as soon as the screen fades back in
+        winMenu.enabled = true;
+        var winCG = winMenu.GetComponent<CanvasGroup>();
+        if (winCG != null)
         {
-            winMenu.enabled = true;
-            StartCoroutine(UIFader.FadeInCanvasGroup(winMenu.GetComponent<CanvasGroup>(), winMenuFadeTime));
-        }
-        if (battleUI != null)
-        {
-            StartCoroutine(UIFader.FadeOutCanvasGroup(battleUI.GetComponent<CanvasGroup>(), battleUiFadeTime));
-            battleUI.enabled = false;
+            winCG.alpha = 1f;
+            winCG.blocksRaycasts = true;
         }
     }
 
+
+    /// <summary>
+    /// Called by the WinMenu “Battle Again” button.
+    /// Immediately hides the win menu, re-shows the battle UI and restarts the fight.
+    /// </summary>
     public void HideWinMenu()
     {
-        if (debugMode) Debug.Log("MenuSystemRefactored: Hiding WinMenu");
-        if (winMenu != null)
+        // Kick off the fade to battle process:
+        StartCoroutine(FadeToBattle(() =>
         {
-            StartCoroutine(UIFader.FadeOutCanvasGroup(winMenu.GetComponent<CanvasGroup>(), winMenuFadeTime));
+            // This action runs while the screen is black:
+
+            // 1) Turn off the win menu
             winMenu.enabled = false;
-        }
-        if (battleUI != null)
-        {
+            var winCg = winMenu.GetComponent<CanvasGroup>();
+            if (winCg != null) winCg.blocksRaycasts = false;
+
+            // 2) Re-enable battle UI
             battleUI.enabled = true;
-            StartCoroutine(UIFader.FadeInCanvasGroup(battleUI.GetComponent<CanvasGroup>(), battleUiFadeTime));
+            var battleCg = battleUI.GetComponent<CanvasGroup>();
+            if (battleCg != null)
+            {
+                battleCg.alpha = 1f;
+                battleCg.blocksRaycasts = true;
+            }
+
+            // 3) Restart the battle
             battleSystem.StartBattle();
-        }
+        }));
     }
 
     // Function to save the game and quit to the main menu.
@@ -77,17 +105,17 @@ public class MenuSystemRefactored : MonoBehaviour
     // SHOW LOSE
     public void ShowLoseMenu()
     {
-        if (battleSystem.state != BattleState.LOST) return;
+        battleUI.enabled = false;
+        var battleCG = battleUI.GetComponent<CanvasGroup>();
+        if (battleCG != null)
+            battleCG.blocksRaycasts = false;
 
-        if (loseMenu != null)
+        loseMenu.enabled = true;
+        var loseCG = loseMenu.GetComponent<CanvasGroup>();
+        if (loseCG != null)
         {
-            loseMenu.enabled = true;
-            StartCoroutine(UIFader.FadeInCanvasGroup(loseMenu.GetComponent<CanvasGroup>(), loseMenuFadeTime));
-        }
-        if (battleUI != null)
-        {
-            StartCoroutine(UIFader.FadeOutCanvasGroup(battleUI.GetComponent<CanvasGroup>(), battleUiFadeTime));
-            battleUI.enabled = false;
+            loseCG.alpha = 1f;
+            loseCG.blocksRaycasts = true;
         }
 
         // update high score
@@ -97,20 +125,33 @@ public class MenuSystemRefactored : MonoBehaviour
             PlayerPrefs.SetInt("BestLevel", current);
     }
 
-    // HIDE LOSE (Retry)
+    /// <summary>
+    /// Called by the LoseMenu “Retry” button.
+    /// Immediately hides the lose menu, re shows the battle UI and restarts the fight.
+    /// </summary>
     public void HideLoseMenu()
     {
-        if (loseMenu != null)
+        StartCoroutine(FadeToBattle(() =>
         {
-            StartCoroutine(UIFader.FadeOutCanvasGroup(loseMenu.GetComponent<CanvasGroup>(), loseMenuFadeTime));
+            // While black:
+
+            // a) Hide the lose menu
             loseMenu.enabled = false;
-        }
-        if (battleUI != null)
-        {
+            var loseCg = loseMenu.GetComponent<CanvasGroup>();
+            if (loseCg != null) loseCg.blocksRaycasts = false;
+
+            // b) Show the battle UI
             battleUI.enabled = true;
-            StartCoroutine(UIFader.FadeInCanvasGroup(battleUI.GetComponent<CanvasGroup>(), battleUiFadeTime));
-        }
-        battleSystem.StartBattle();
+            var battleCg = battleUI.GetComponent<CanvasGroup>();
+            if (battleCg != null)
+            {
+                battleCg.alpha = 1f;
+                battleCg.blocksRaycasts = true;
+            }
+
+            // c) Restart the battle
+            battleSystem.StartBattle();
+        }));
     }
 
     // Function to return to main menu.
@@ -121,7 +162,7 @@ public class MenuSystemRefactored : MonoBehaviour
 
     /// <summary>
     /// Called by the LoseMenu “Main Menu” button.
-    /// Clears the auto-save and then loads the main menu.
+    /// Clears the auto save and then loads the main menu.
     /// </summary>
     public void ReturnToMainMenuFromLose()
     {
@@ -145,6 +186,41 @@ public class MenuSystemRefactored : MonoBehaviour
         else
         {
             SceneManager.LoadScene(sceneName);
+        }
+    }
+
+    /// <summary>
+    /// Fade to black, invoke the swap back to battle action,
+    /// then fade back to transparent.
+    /// </summary>
+    private IEnumerator FadeToBattle(Action hideMenuAndRestart)
+    {
+        if (_screenFader != null)
+        {
+            // grab the CanvasGroup on the fader
+            CanvasGroup cg = _screenFader.GetComponent<CanvasGroup>();
+
+            // 1) enable and block
+            _screenFader.gameObject.SetActive(true);
+            cg.blocksRaycasts = true;
+
+            // 2) fade to black
+            yield return UIFader.FadeInCanvasGroup(cg, endFadeDuration);
+
+            // 3) swap UI: hide the menu, show the battle canvas, restart the battle
+            hideMenuAndRestart();
+
+            // 4) fade back to transparent
+            yield return UIFader.FadeOutCanvasGroup(cg, endFadeDuration);
+
+            // 5) unblock and disable
+            cg.blocksRaycasts = false;
+            _screenFader.gameObject.SetActive(false);
+        }
+        else
+        {
+            // fallback: just do it immediately
+            hideMenuAndRestart();
         }
     }
 }
