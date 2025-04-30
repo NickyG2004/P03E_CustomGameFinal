@@ -1,42 +1,84 @@
 // -----------------------------------------------------------------------------
 // StatsCalculator.cs
 // -----------------------------------------------------------------------------
-// Performs logarithmic stat scaling based on level input.
+// Performs scaling of HP, damage, and speed based on unit level using configurable
+// growth factors and base values.
 // -----------------------------------------------------------------------------
+
 using UnityEngine;
 
-// [CreateAssetMenu(menuName = "Stats/StatsCalculator")]
-public class StatsCalculator : MonoBehaviour
+/// <summary>
+/// Calculates scaled stats (HP, damage, speed) for a given level.
+/// </summary>
+[CreateAssetMenu(menuName = "Stats/StatsCalculator")]
+public class StatsCalculator : ScriptableObject
 {
-    #region Serialized Fields
-    [Header("HP")]
-    public int baseHP;
-    public float hpGrowthFactor;      // used with Mathf.Log(level+1)
+    // -------------------------------------------------------------------------
+    // Inspector Fields
+    // -------------------------------------------------------------------------
+    [Header("Health (HP)")]
+    [SerializeField, Tooltip("Base hit points at level 1")]
+    private int _baseHP;
+    [SerializeField, Tooltip("Growth factor for HP scaling (logarithmic)")]
+    private float _hpGrowthFactor;
 
     [Header("Damage")]
-    public int baseDamage;
-    public float damageGrowthFactor;  // ditto
+    [SerializeField, Tooltip("Base damage at level 1")]
+    private int _baseDamage;
+    [SerializeField, Tooltip("Growth factor for damage scaling (logarithmic)")]
+    private float _damageGrowthFactor;
 
     [Header("Speed")]
-    [Tooltip("Base speed at level 1")]
-    public int baseSpeed;
-    [Tooltip("Linear speed gained per level above 1")]
-    public float speedGrowthPerLevel;
+    [SerializeField, Tooltip("Base speed at level 1")]
+    private int _baseSpeed;
+    [SerializeField, Tooltip("Linear speed increase per level beyond 1")]
+    private float _speedGrowthPerLevel;
 
-    #endregion
-
-    #region Public API
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
     /// <summary>
-    /// Calculates HP, damage, and speed for the given level.
+    /// Calculates HP, damage, and speed values for the specified unit level.
     /// </summary>
+    /// <param name="level">Unit level (must be >= 1).</param>
+    /// <param name="hp">Output: computed hit points.</param>
+    /// <param name="dmg">Output: computed damage.</param>
+    /// <param name="spd">Output: computed speed.</param>
     public void CalculateStats(int level, out int hp, out int dmg, out int spd)
     {
-        // HP & Damage as before
-        hp = Mathf.FloorToInt(baseHP * Mathf.Log(level + 1) * hpGrowthFactor);
-        dmg = Mathf.CeilToInt(baseDamage * Mathf.Log(level + 1) * damageGrowthFactor);
-
-        // Speed: baseSpeed + growth × (level–1)
-        spd = Mathf.RoundToInt(baseSpeed + speedGrowthPerLevel * (level - 1));
+        // calculate each stat using helper methods
+        hp = CalculateHP(level);
+        dmg = CalculateDamage(level);
+        spd = CalculateSpeed(level);
     }
-    #endregion
+
+    // -------------------------------------------------------------------------
+    // Helper Methods
+    // -------------------------------------------------------------------------
+    /// <summary>
+    /// Computes the scaled HP for a given level.
+    /// </summary>
+    private int CalculateHP(int level)
+    {
+        // floor(baseHP * log(level + 1) * hpGrowthFactor)
+        return Mathf.FloorToInt(_baseHP * Mathf.Log(level + 1) * _hpGrowthFactor);
+    }
+
+    /// <summary>
+    /// Computes the scaled damage for a given level.
+    /// </summary>
+    private int CalculateDamage(int level)
+    {
+        // ceil(baseDamage * log(level + 1) * damageGrowthFactor)
+        return Mathf.CeilToInt(_baseDamage * Mathf.Log(level + 1) * _damageGrowthFactor);
+    }
+
+    /// <summary>
+    /// Computes the scaled speed for a given level.
+    /// </summary>
+    private int CalculateSpeed(int level)
+    {
+        // round(baseSpeed + speedGrowthPerLevel * (level - 1))
+        return Mathf.RoundToInt(_baseSpeed + _speedGrowthPerLevel * (level - 1));
+    }
 }
