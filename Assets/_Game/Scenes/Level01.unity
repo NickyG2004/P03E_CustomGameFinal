@@ -289,6 +289,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6833089805355be449f823128c362cf9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  battleActions: {fileID: 79349227}
   playerPrefab: {fileID: 1074099462469984375, guid: 2e0c200b2b5f528458a8d68afc17698f, type: 3}
   enemyPrefab: {fileID: 4626300669077577570, guid: aba4bef0d19cede4ca0708767a4dbffe, type: 3}
   playerBattleStation: {fileID: 1333734399}
@@ -296,6 +297,14 @@ MonoBehaviour:
   dialogueText: {fileID: 1010811452}
   playerHUD: {fileID: 1298802699}
   enemyHUD: {fileID: 1852361053}
+  attackButton: {fileID: 1947713005}
+  healButton: {fileID: 1854048542}
+  healMinMultiplier: 0.5
+  healMaxMultiplier: 1.5
+  damageMinMultiplier: 0.8
+  damageMaxMultiplier: 1.2
+  critChance: 0.1
+  critMultiplier: 1.5
   battleStartDelay: 2
   turnDelay: 2
   buttonDelay: 2

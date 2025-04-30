@@ -10,6 +10,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 /// <summary>
 /// Represents the state of the battle progression.
@@ -19,6 +20,9 @@ public enum BattleState { START, PLAYERTURN, ENEMYTURN, WON, LOST, NEXTMENU }
 public class BattleSystemRefactored : MonoBehaviour
 {
     #region Serialized Fields
+    [Header("References to Helpers")]
+    public BattleActionsRefactored battleActions;  // drag in from Inspector
+
     [Header("Prefabs & Stations")]
     [Tooltip("Player unit prefab")]
     [SerializeField] private GameObject playerPrefab;
@@ -36,6 +40,27 @@ public class BattleSystemRefactored : MonoBehaviour
     [SerializeField] public BattleHUDRefactored playerHUD;
     [Tooltip("Enemy HUD reference")]
     [SerializeField] public BattleHUDRefactored enemyHUD;
+
+
+    [Header("Player Action Buttons")]
+    [SerializeField] public Button attackButton;  // drag your Attack button here
+    [SerializeField] public Button healButton;    // drag your Heal button here
+    // [SerializeField] public Button defendButton;     // future Defend option
+
+    [Header("Heal Settings (per player level)")]
+    [Tooltip("Minimum heal = floor(level * this)")]
+    public float healMinMultiplier = 0.5f;
+    [Tooltip("Maximum heal = ceil(level * this)")]
+    public float healMaxMultiplier = 1.5f;
+
+    [Header("Damage Settings (per level)")]
+    public float damageMinMultiplier = 0.8f;
+    public float damageMaxMultiplier = 1.2f;
+
+    [Header("Critical Hits")]
+    [Range(0, 1)]
+    public float critChance = 0.1f;
+    public float critMultiplier = 1.5f;
 
     [Header("Battle Timers & Values")]
     [Tooltip("Delay before battle starts")]
@@ -99,36 +124,6 @@ public class BattleSystemRefactored : MonoBehaviour
         StartCoroutine(SetUpBattle());
     }
 
-    /// <summary> Precents text on the players.</summary>
-    public void PlayerTurn()
-    {
-        state = BattleState.PLAYERTURN;
-        dialogueText.text = "Choose an action:";
-    }
-
-
-    /// <summary>Called to end the battle: triggers fade & appropriate menu.</summary>
-    public void EndBattle()
-    {
-        // Decide which menu to show
-        Action showMenu = state == BattleState.WON
-            ? _menuSystem.ShowWinMenu
-            : _menuSystem.ShowLoseMenu;
-
-        // Update persistent level for player win
-        if (state == BattleState.WON)
-        {
-            playerUnit.LevelUp(levelUpAmount);
-            enemyUnit.LevelUp(UnityEngine.Random.Range(1, 3));
-            playerHUD.SetHUD(playerUnit);
-            enemyHUD.SetHUD(enemyUnit);
-            SaveManager.PlayerLevel = playerUnit.unitLevel;
-            SaveManager.EnemyLevel = enemyUnit.unitLevel;
-        }
-
-        // Start fade sequence then menu display
-        StartCoroutine(FadeToMenu(showMenu));
-    }
     #endregion
 
     #region Coroutines
@@ -142,16 +137,29 @@ public class BattleSystemRefactored : MonoBehaviour
         // Instantiate and initialize enemy
         var eGO = Instantiate(enemyPrefab, enemyBattleStation);
         enemyUnit = eGO.GetComponent<UnitRefactored>();
-        enemyUnit.InitializeLevel(SaveManager.EnemyLevel);
+
+        // 1) Get the player’s current level
+        int playerLvl = SaveManager.PlayerLevel;
+
+        // 2) Pick a random offset of -1, 0, +1, or +2
+        //    Random.Range(0,4) returns {0,1,2,3}; subtract 1 -> {-1,0,1,2}
+        int diff = UnityEngine.Random.Range(0, 4) - 1;
+
+        // 3) Compute enemy level, clamped so it never drops below 1
+        int enemyLvl = Mathf.Max(1, playerLvl + diff);
+
+        // 4) Apply it to the enemy and update the saved value
+        enemyUnit.InitializeLevel(enemyLvl);
+        SaveManager.EnemyLevel = enemyLvl;
 
         // Update HUDs and intro text
         playerHUD.SetHUD(playerUnit);
         enemyHUD.SetHUD(enemyUnit);
         yield return ShowDialog($"A wild {enemyUnit.unitName} appeared!");
 
-        // Begin player turn
-        state = BattleState.PLAYERTURN;
-        yield return ShowDialog("Choose an action:");
+        // Begin player turn by callin the coroutine
+        yield return StartCoroutine(PlayerTurn());
+
     }
 
     private IEnumerator FadeToMenu(Action showMenu)
@@ -184,57 +192,86 @@ public class BattleSystemRefactored : MonoBehaviour
     #endregion
 
     #region Battle Flow Coroutines
-    /// <summary>Handles the player attack action and transitions.</summary>
-    public IEnumerator PlayerAttack()
+    /// <summary>/// Handles the player’s turn: enables action buttons and waits for input./// </summary>
+    public IEnumerator PlayerTurn()
     {
-        // Damage enemy
-        bool enemyDead = enemyUnit.TakeDamage(playerUnit.damage);
-        enemyHUD.SetHP(enemyUnit.currentHP);
-        yield return ShowDialog("Attack successful!");
+        // 1) Set the state
+        state = BattleState.PLAYERTURN;
 
-        if (enemyDead)
-        {
-            state = BattleState.WON;
-            yield return new WaitForSeconds(turnDelay);
-            EndBattle();
-        }
-        else
-        {
-            state = BattleState.ENEMYTURN;
-            yield return EnemyTurn();
-        }
+        // 2) Update the dialog
+        dialogueText.text = "Choose an action:";
+
+        // 3) Re-enable the action buttons
+        SetActionButtonsInteractable(true);
+
+        // 4) End the coroutine immediately
+        yield break;
     }
 
-    /// <summary>Handles the player heal action and transitions.</summary>
-    public IEnumerator PlayerHeal()
+    public IEnumerator EnemyTurn()
     {
-        yield return ShowDialog("Healing...");
-        playerUnit.Heal(healAmount);
-        playerHUD.SetHP(playerUnit.currentHP);
-        yield return ShowDialog($"Healed for {healAmount} HP!");
+        // 1) Switch state & disable player buttons
         state = BattleState.ENEMYTURN;
-        yield return EnemyTurn();
-    }
+        SetActionButtonsInteractable(false);
 
-    /// <summary>Enemy's automated turn behavior.</summary>
-    private IEnumerator EnemyTurn()
-    {
-        yield return ShowDialog($"{enemyUnit.unitName} attacks!");
-        bool playerDead = playerUnit.TakeDamage(enemyUnit.damage);
-        playerHUD.SetHP(playerUnit.currentHP);
+        // 2) Tell the player it’s the enemy’s turn
+        dialogueText.text = $"{enemyUnit.unitName}'s turn!";
+        yield return new WaitForSeconds(turnDelay);
 
-        if (playerDead)
+        // 3) Delegate the actual attack
+        yield return StartCoroutine(battleActions.EnemyAttack());
+
+        // 4) Check for player defeat
+        if (playerUnit.currentHP <= 0)
         {
             state = BattleState.LOST;
-            yield return new WaitForSeconds(turnDelay);
-            EndBattle();
+            yield return StartCoroutine(EndBattle());
+            yield break;
         }
-        else
-        {
-            state = BattleState.PLAYERTURN;
-            yield return ShowDialog("Your turn!");
-        }
+
+        // 5) Small pause before giving back control
+        yield return new WaitForSeconds(turnDelay);
+
+        // 6) Your turn prompt
+        dialogueText.text = "Your turn!";
+        yield return new WaitForSeconds(turnDelay);
+
+        // 7) Hand back to player
+        yield return StartCoroutine(PlayerTurn());
     }
+
+    /// <summary>Called to end the battle: triggers fade & appropriate menu.</summary>
+    public IEnumerator EndBattle()
+    {
+        // Decide which menu to show after fade
+        Action showMenu = state == BattleState.WON
+            ? _menuSystem.ShowWinMenu
+            : _menuSystem.ShowLoseMenu;
+
+        // 1) Show win/lose text
+        dialogueText.text = state == BattleState.WON
+            ? "You Win!"
+            : "You Lose!";
+
+        // 2) Pause so the player sees it
+        yield return new WaitForSeconds(turnDelay);
+
+        // 3) On win, bump the player’s level, update HUDs, and save
+        if (state == BattleState.WON)
+        {
+            playerUnit.LevelUp(levelUpAmount);
+            playerHUD.SetHUD(playerUnit);
+            enemyHUD.SetHUD(enemyUnit);
+            SaveManager.PlayerLevel = playerUnit.unitLevel;
+        }
+
+        // 4) Fade out and then show the menu, and wait for it to finish
+        yield return StartCoroutine(FadeToMenu(showMenu));
+
+        // 5) (Optional) explicit end
+        yield break;
+    }
+
     #endregion
 
     #region Helper Methods
@@ -245,6 +282,20 @@ public class BattleSystemRefactored : MonoBehaviour
     {
         dialogueText.text = message;
         yield return new WaitForSeconds(buttonDelay);
+    }
+
+    /// <summary>
+    /// Enable/disable all action buttons at once.
+    /// </summary>
+    public void SetActionButtonsInteractable(bool enabled)
+    {
+        attackButton.interactable = enabled;
+        healButton.interactable = enabled;
+        //defendButton.interactable = enabled;
+
+        // if using a list:
+        // foreach (var btn in actionButtons)
+        //     btn.interactable = enabled;
     }
     #endregion
 }

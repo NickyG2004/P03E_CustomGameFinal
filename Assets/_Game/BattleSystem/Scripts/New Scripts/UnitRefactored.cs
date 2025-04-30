@@ -47,8 +47,74 @@ public class UnitRefactored : MonoBehaviour
         SaveManager.PlayerLevel = unitLevel;
     }
 
+    /// <summary>
+    /// Re-calculates (base) damage for the current unitLevel and returns it.
+    /// </summary>
+    public int calcDamage
+    {
+        get
+        {
+            // re-run your stat calc each time
+            _statsCalc.CalculateStats(unitLevel, out _, out int dmg);
+            return dmg;
+        }
+    }
+
+    /// <summary>
+    /// Returns a random heal amount based on this unit’s level and the given multipliers.
+    /// </summary>
+    public int GetRandomHealAmount(float minMultiplier, float maxMultiplier)
+    {
+        // Compute the raw range
+        int minHeal = Mathf.FloorToInt(Level * minMultiplier);
+        int maxHeal = Mathf.CeilToInt(Level * maxMultiplier);
+
+        // Roll and return
+        return Random.Range(minHeal, maxHeal + 1);
+    }
+
+    /// <summary>
+    /// Returns a random damage roll between minMultiplier*BaseDamage and maxMultiplier*BaseDamage,
+    /// then applies a critical multiplier if roll < critChance.
+    /// </summary>
+    public int RollDamage(
+        float minMultiplier,
+        float maxMultiplier,
+        float critChance,
+        float critMultiplier,
+        out bool wasCrit
+    )
+    {
+        // 1) Base roll range
+        int minD = Mathf.FloorToInt(BaseDamage * minMultiplier);
+        int maxD = Mathf.CeilToInt(BaseDamage * maxMultiplier);
+        int roll = Random.Range(minD, maxD + 1);
+
+        // 2) Crit check
+        wasCrit = Random.value < critChance;
+        if (wasCrit)
+        {
+            roll = Mathf.CeilToInt(roll * critMultiplier);
+        }
+
+        return roll;
+    }
+
     public bool TakeDamage(int dmg) => _healthComp.TakeDamage(dmg);
     public void Heal(int amt) => _healthComp.Heal(amt);
+
+    /// <summary> The current, in battle level of this unit </summary>
+    public int Level => unitLevel;
+
+    /// <summary>Recalculates base damage via StatsCalculator.</summary>
+    public int BaseDamage
+    {
+        get
+        {
+            _statsCalc.CalculateStats(unitLevel, out _, out int dmg);
+            return dmg;
+        }
+    }
 
     public int maxHP => _healthComp.maxHP;
     public int currentHP => _healthComp.currentHP;

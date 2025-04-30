@@ -48,7 +48,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baseMaxHP: 30
-  baseDamage: 40
+  baseDamage: 5
   hpLogGrowthFactor: 10
   damageLogGrowthFactor: 2
 --- !u!114 &311606560417318321
@@ -75,7 +75,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92db2a0d3a8efcd4daa7b6654fa74ab9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debugMode: 0
   unitName: Player
   unitLevel: 1
 --- !u!1 &4347409319922439739
