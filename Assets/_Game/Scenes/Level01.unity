@@ -306,8 +306,8 @@ MonoBehaviour:
   critChance: 0.1
   critMultiplier: 1.5
   battleStartDelay: 2
-  turnDelay: 2
-  buttonDelay: 2
+  turnDelay: 1
+  buttonDelay: 0.5
   healAmount: 10
   levelUpAmount: 1
   endFadeDuration: 1.5

@@ -111,23 +111,17 @@ public class BattleSystemRefactored : MonoBehaviour
 
     private void Start()
     {
-        // Begin the battle flow
-        StartBattle();
+        // Initial battle entry on scene load:
+        StartCoroutine(InitialBattle());
     }
     #endregion
 
     #region Public API
-    /// <summary>Initiate a new battle: resets state and begins setup coroutine.</summary>
-    public void StartBattle()
-    {
-        state = BattleState.START;
-        StartCoroutine(SetUpBattle());
-    }
 
     #endregion
 
     #region Coroutines
-    private IEnumerator SetUpBattle()
+    public IEnumerator SetUpBattle()
     {
         // Instantiate and initialize player
         var pGO = Instantiate(playerPrefab, playerBattleStation);
@@ -156,9 +150,6 @@ public class BattleSystemRefactored : MonoBehaviour
         playerHUD.SetHUD(playerUnit);
         enemyHUD.SetHUD(enemyUnit);
         yield return ShowDialog($"A wild {enemyUnit.unitName} appeared!");
-
-        // Begin player turn by callin the coroutine
-        yield return StartCoroutine(PlayerTurn());
 
     }
 
@@ -192,6 +183,26 @@ public class BattleSystemRefactored : MonoBehaviour
     #endregion
 
     #region Battle Flow Coroutines
+    public IEnumerator InitialBattle()
+    {
+        yield return SetUpBattle();
+        yield return StartCoroutine(StartBattle());
+    }
+
+    /// <summary>Initiate a new battle: resets state and begins setup coroutine.</summary>
+    public IEnumerator StartBattle()
+    {
+        state = BattleState.START;   // if you still want that flag
+
+        // tiny buffer so the player can read “A wild X appeared!”
+        yield return new WaitForSeconds(battleStartDelay);
+
+        if (playerUnit.Speed >= enemyUnit.Speed)
+            yield return StartCoroutine(PlayerTurn());
+        else
+            yield return StartCoroutine(EnemyTurn());
+    }
+
     /// <summary>/// Handles the player’s turn: enables action buttons and waits for input./// </summary>
     public IEnumerator PlayerTurn()
     {
@@ -262,7 +273,7 @@ public class BattleSystemRefactored : MonoBehaviour
             playerUnit.LevelUp(levelUpAmount);
             playerHUD.SetHUD(playerUnit);
             enemyHUD.SetHUD(enemyUnit);
-            SaveManager.PlayerLevel = playerUnit.unitLevel;
+            SaveManager.PlayerLevel = playerUnit.Level;
         }
 
         // 4) Fade out and then show the menu, and wait for it to finish

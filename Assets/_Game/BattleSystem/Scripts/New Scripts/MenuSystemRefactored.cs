@@ -61,33 +61,32 @@ public class MenuSystemRefactored : MonoBehaviour
     /// <summary>
     /// Handles re-entry to battle after win or loss.
     /// </summary>
-    private IEnumerator TransitionBackToBattle(Canvas menu)
+    public IEnumerator TransitionBackToBattle(Canvas menu)
     {
-        // If we're retrying after a loss, clear out any saved levels
         if (menu == loseMenu)
             SaveManager.ResetProgress();
 
-        if (_screenFader != null)
-        {
-            var cg = _screenFader.GetComponent<CanvasGroup>();
-            _screenFader.gameObject.SetActive(true);
-            cg.blocksRaycasts = true;
-            yield return UIFader.FadeInCanvasGroup(cg, menuFadeDuration);
+        var cg = _screenFader.GetComponent<CanvasGroup>();
+        _screenFader.gameObject.SetActive(true);
+        cg.blocksRaycasts = true;
 
-            SetMenuState(menu, false);
-            SetMenuState(battleUI, true);
-            battleSystem.StartBattle();
+        // 1) Fade overlay in
+        yield return UIFader.FadeInCanvasGroup(cg, menuFadeDuration);
 
-            yield return UIFader.FadeOutCanvasGroup(cg, menuFadeDuration);
-            cg.blocksRaycasts = false;
-            _screenFader.gameObject.SetActive(false);
-        }
-        else
-        {
-            SetMenuState(menu, false);
-            SetMenuState(battleUI, true);
-            battleSystem.StartBattle();
-        }
+        // 2) Swap the menus behind it
+        SetMenuState(menu, false);
+        SetMenuState(battleUI, true);
+
+        // 3) ONLY do the unit & HUD setup here
+        yield return StartCoroutine(battleSystem.SetUpBattle());
+
+        // 4) Fade overlay out
+        yield return UIFader.FadeOutCanvasGroup(cg, menuFadeDuration);
+        cg.blocksRaycasts = false;
+        _screenFader.gameObject.SetActive(false);
+
+        // 5) **Now** start the turn logic
+        yield return StartCoroutine(battleSystem.StartBattle());
     }
 
     private IEnumerator TransitionToMainMenu(bool wasLoss)

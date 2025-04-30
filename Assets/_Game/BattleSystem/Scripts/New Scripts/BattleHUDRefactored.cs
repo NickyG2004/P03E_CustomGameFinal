@@ -20,9 +20,9 @@ public class BattleHUDRefactored : MonoBehaviour
     public void SetHUD(UnitRefactored unit)
     {
         if (debugMode)
-            Debug.Log($"HUD: {unit.unitName} L{unit.unitLevel} HP{unit.currentHP}/{unit.maxHP}");
+            Debug.Log($"HUD: {unit.unitName} L{unit.Level} HP{unit.currentHP}/{unit.maxHP}");
         nameText.text = unit.unitName;
-        levelText.text = "Lvl: " + unit.unitLevel;
+        levelText.text = "Lvl: " + unit.Level;
         hpSlider.maxValue = unit.maxHP;
         hpSlider.value = unit.currentHP;
     }

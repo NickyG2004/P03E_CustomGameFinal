@@ -5,24 +5,38 @@
 // -----------------------------------------------------------------------------
 using UnityEngine;
 
+// [CreateAssetMenu(menuName = "Stats/StatsCalculator")]
 public class StatsCalculator : MonoBehaviour
 {
     #region Serialized Fields
-    [Header("Base Stats at Level 1")] public int baseMaxHP;
-    public int baseDamage;
+    [Header("HP")]
+    public int baseHP;
+    public float hpGrowthFactor;      // used with Mathf.Log(level+1)
 
-    [Header("Log Growth Factors")] public float hpLogGrowthFactor = 10f;
-    public float damageLogGrowthFactor = 2f;
+    [Header("Damage")]
+    public int baseDamage;
+    public float damageGrowthFactor;  // ditto
+
+    [Header("Speed")]
+    [Tooltip("Base speed at level 1")]
+    public int baseSpeed;
+    [Tooltip("Linear speed gained per level above 1")]
+    public float speedGrowthPerLevel;
+
     #endregion
 
     #region Public API
     /// <summary>
-    /// Calculate HP and damage for a given level.
+    /// Calculates HP, damage, and speed for the given level.
     /// </summary>
-    public void CalculateStats(int level, out int scaledHP, out int scaledDamage)
+    public void CalculateStats(int level, out int hp, out int dmg, out int spd)
     {
-        scaledHP = Mathf.CeilToInt(baseMaxHP + hpLogGrowthFactor * Mathf.Log(level + 1));
-        scaledDamage = Mathf.CeilToInt(baseDamage + damageLogGrowthFactor * Mathf.Log(level + 1));
+        // HP & Damage as before
+        hp = Mathf.FloorToInt(baseHP * Mathf.Log(level + 1) * hpGrowthFactor);
+        dmg = Mathf.CeilToInt(baseDamage * Mathf.Log(level + 1) * damageGrowthFactor);
+
+        // Speed: baseSpeed + growth × (level–1)
+        spd = Mathf.RoundToInt(baseSpeed + speedGrowthPerLevel * (level - 1));
     }
     #endregion
 }

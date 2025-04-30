@@ -47,10 +47,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 328b944b14cad1747b50f8ae261dc797, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseMaxHP: 30
-  baseDamage: 5
-  hpLogGrowthFactor: 10
-  damageLogGrowthFactor: 2
+  baseHP: 100
+  hpGrowthFactor: 0.5
+  baseDamage: 62
+  damageGrowthFactor: 0.5
+  baseSpeed: 10
+  speedGrowthPerLevel: 1
 --- !u!114 &311606560417318321
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -76,6 +78,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   unitName: Player
+  statsCalculator: {fileID: 8822217809216479347}
+  healthComponent: {fileID: 311606560417318321}
   unitLevel: 1
 --- !u!1 &4347409319922439739
 GameObject:
