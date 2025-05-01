@@ -185,24 +185,33 @@ public class UnitRefactored : MonoBehaviour
 
     /// <summary>
     /// Calculates a random amount of healing based on the unit's level and specified multipliers.
+    /// The result can be 0 if multipliers/level are low.
     /// </summary>
     /// <param name="minMultiplier">Minimum heal multiplier (applied to level).</param>
     /// <param name="maxMultiplier">Maximum heal multiplier (applied to level).</param>
-    /// <returns>A random heal amount within the calculated range (ensuring at least 1 if possible).</returns>
+    /// <returns>A random heal amount within the calculated range.</returns>
     public int GetRandomHealAmount(float minMultiplier, float maxMultiplier)
     {
-        // Use Level property, which is already clamped >= 1
-        int minHeal = Mathf.FloorToInt(Level * minMultiplier);
-        int maxHeal = Mathf.CeilToInt(Level * maxMultiplier);
+        int effectiveLevel = Mathf.Max(1, Level);
+        Debug.Log($"[GetRandomHealAmount] Level: {Level}, EffectiveLevel: {effectiveLevel}, MinMult: {minMultiplier}, MaxMult: {maxMultiplier}"); // DEBUG
 
-        // Ensure minHeal is not greater than maxHeal
-        if (minHeal > maxHeal) minHeal = maxHeal;
+        int minHeal = Mathf.FloorToInt(effectiveLevel * minMultiplier);
+        int maxHeal = Mathf.CeilToInt(effectiveLevel * maxMultiplier);
+        Debug.Log($"[GetRandomHealAmount] Calculated Base Range: [{minHeal}, {maxHeal}]"); // DEBUG
 
-        // Ensure heal amount is at least 1 if maxHeal is 1 or more
-        minHeal = Mathf.Max(1, minHeal);
-        maxHeal = Mathf.Max(1, maxHeal); // Ensure max is also at least 1
+        if (minHeal > maxHeal)
+        {
+            Debug.LogWarning($"[GetRandomHealAmount] minHeal ({minHeal}) > maxHeal ({maxHeal}). Clamping minHeal."); // DEBUG
+            minHeal = maxHeal;
+        }
 
-        return UnityEngine.Random.Range(minHeal, maxHeal + 1); // Max is inclusive
+        minHeal = Mathf.Max(0, minHeal); // Allow 0 healing initially
+        maxHeal = Mathf.Max(0, maxHeal);
+        Debug.Log($"[GetRandomHealAmount] Clamped Range (>=0): [{minHeal}, {maxHeal}]"); // DEBUG
+
+        int result = UnityEngine.Random.Range(minHeal, maxHeal + 1);
+        Debug.Log($"[GetRandomHealAmount] Random.Range({minHeal}, {maxHeal + 1}) Result: {result}"); // DEBUG
+        return result;
     }
 
     #endregion

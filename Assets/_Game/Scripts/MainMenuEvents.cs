@@ -279,7 +279,7 @@ public class MainMenuEvents : MonoBehaviour
         if (_debugMode) Debug.Log("[MainMenuEvents] 'Start New Game' button clicked.", this);
 
         // Reset progress using SaveManager static class
-        SaveManager.PlayerLevel = 1;
+        SaveManager.PlayerLevel = 4;
         SaveManager.EnemyLevel = 1;
         // Note: SaveManager properties handle PlayerPrefs.Save() internally
 

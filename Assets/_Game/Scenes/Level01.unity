@@ -301,8 +301,8 @@ MonoBehaviour:
   _enemyHUD: {fileID: 1852361053}
   _attackButton: {fileID: 1947713005}
   _healButton: {fileID: 1854048542}
-  _healMinMultiplier: 0.5
-  _healMaxMultiplier: 1.5
+  _healMinMultiplier: 1.5
+  _healMaxMultiplier: 3
   _baseHealAmount: 10
   _damageMinMultiplier: 0.8
   _damageMaxMultiplier: 1.2

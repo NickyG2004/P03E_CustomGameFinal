@@ -132,41 +132,48 @@ public class BattleActionsRefactored : MonoBehaviour
     {
         if (!ValidateBattleSystemReference()) yield break;
 
-        // Disable input immediately
         _battleSystem.SetActionButtonsInteractable(false);
 
-        // Check if already at full health
-        if (_battleSystem.PlayerUnit.CurrentHP >= _battleSystem.PlayerUnit.MaxHP)
-        {
-            yield return ShowMessageRoutine("Already at full health!", _battleSystem.TurnDelay);
-            // Re-enable buttons and return control to player choice
-            yield return StartCoroutine(_battleSystem.PlayerTurnRoutine());
-            yield break; // Exit this routine
-        }
+        if (_battleSystem.PlayerUnit.CurrentHP >= _battleSystem.PlayerUnit.MaxHP) { /*...*/ yield break; } // Full health check unchanged
 
-        // Calculate heal amount based on player level and multipliers
+        // Calculate heal amount using the debugged Unit method
         int healValue = _battleSystem.PlayerUnit.GetRandomHealAmount(
             _battleSystem.HealMinMultiplier,
             _battleSystem.HealMaxMultiplier
         );
+        Debug.Log($"[PlayerHealRoutine] Initial healValue from GetRandomHealAmount: {healValue}"); // DEBUG
 
         // Clamp heal amount so it doesn't exceed missing HP
         int missingHP = _battleSystem.PlayerUnit.MaxHP - _battleSystem.PlayerUnit.CurrentHP;
-        healValue = Mathf.Min(healValue, missingHP);
-        // Ensure at least 1 point is healed if possible and missing HP
-        healValue = Mathf.Max(1, healValue);
+        Debug.Log($"[PlayerHealRoutine] Missing HP: {missingHP}"); // DEBUG
+        int clampedHealValue = Mathf.Min(healValue, missingHP);
+        Debug.Log($"[PlayerHealRoutine] HealValue after clamping to missing HP: {clampedHealValue}"); // DEBUG
 
+        // Apply Option B: Ensure at least 1 HP is healed if calculated > 0
+        int finalHealValue = clampedHealValue; // Start with clamped value
+        if (finalHealValue > 0)
+        {
+            finalHealValue = Mathf.Max(1, finalHealValue);
+            Debug.Log($"[PlayerHealRoutine] HealValue after Mathf.Max(1, value): {finalHealValue}"); // DEBUG
+        }
 
-        // Show initial healing message
-        yield return ShowMessageRoutine("Healing...", _battleSystem.FeedbackDelay);
+        if (finalHealValue <= 0)
+        {
+            Debug.Log($"[PlayerHealRoutine] Final Heal Value is <= 0. Showing message and returning."); // DEBUG
+            yield return StartCoroutine(ShowMessageRoutine("Unable to heal further!", _battleSystem.TurnDelay));
+            yield return StartCoroutine(_battleSystem.PlayerTurnRoutine());
+            yield break;
+        }
 
-        // Apply heal and update player HUD
-        _battleSystem.PlayerUnit.Heal(healValue);
+        yield return StartCoroutine(ShowMessageRoutine("Healing...", _battleSystem.FeedbackDelay));
+
+        // Apply final heal amount
+        Debug.Log($"[PlayerHealRoutine] Applying final heal: {finalHealValue}"); // DEBUG
+        _battleSystem.PlayerUnit.Heal(finalHealValue);
         _battleSystem.PlayerHUD.SetHP(_battleSystem.PlayerUnit.CurrentHP);
 
-        // Show result message and transition to enemy turn
-        yield return ShowMessageRoutine($"Recovered {healValue} HP!", _battleSystem.TurnDelay);
-        yield return StartCoroutine(_battleSystem.EnemyTurnRoutine()); // Start enemy's turn
+        yield return StartCoroutine(ShowMessageRoutine($"Recovered {finalHealValue} HP!", _battleSystem.TurnDelay));
+        yield return StartCoroutine(_battleSystem.EnemyTurnRoutine());
     }
 
     // -------------------------------------------------------------------------

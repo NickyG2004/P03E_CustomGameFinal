@@ -132,6 +132,8 @@ public class BattleSystemRefactored : MonoBehaviour
     // References found/set in Awake/Start are now serialized fields above (_menuSystem, _screenFader)
     private int _currentPlayerLevel; // Use current level for calculations
     private int _currentEnemyLevel; // Use current level
+    private GameObject _playerUnitInstance;
+    private GameObject _enemyUnitInstance;
 
     // Coroutine reference for the main battle flow
     private Coroutine _battleFlowCoroutine;
@@ -330,16 +332,25 @@ public class BattleSystemRefactored : MonoBehaviour
     /// <summary> Destroys existing player/enemy GameObjects under the battle stations. </summary>
     private void ClearExistingUnits()
     {
-        if (_playerBattleStation != null)
+        // --- Destroy stored instances directly ---
+        if (_playerUnitInstance != null)
         {
-            foreach (Transform child in _playerBattleStation) { Destroy(child.gameObject); }
+            Destroy(_playerUnitInstance);
+            // _playerUnitInstance = null; // Set to null immediately after Destroy
         }
-        if (_enemyBattleStation != null)
+        if (_enemyUnitInstance != null)
         {
-            foreach (Transform child in _enemyBattleStation) { Destroy(child.gameObject); }
+            Destroy(_enemyUnitInstance);
+            // _enemyUnitInstance = null; // Set to null immediately after Destroy
         }
+        // --- End modification ---
+
+        // Still clear the component references
         PlayerUnit = null;
         EnemyUnit = null;
+        // Null instance references after destroying
+        _playerUnitInstance = null;
+        _enemyUnitInstance = null;
     }
 
 
@@ -363,6 +374,17 @@ public class BattleSystemRefactored : MonoBehaviour
         }
 
         unitComponent.InitializeLevel(level);
+
+        // --- Store the GameObject reference ---
+        if (parentStation == _playerBattleStation)
+        {
+            _playerUnitInstance = unitGO;
+        }
+        else if (parentStation == _enemyBattleStation)
+        {
+            _enemyUnitInstance = unitGO;
+        }
+
         return unitComponent;
     }
 
