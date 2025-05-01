@@ -289,28 +289,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6833089805355be449f823128c362cf9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  battleActions: {fileID: 79349227}
-  playerPrefab: {fileID: 1074099462469984375, guid: 2e0c200b2b5f528458a8d68afc17698f, type: 3}
-  enemyPrefab: {fileID: 4626300669077577570, guid: aba4bef0d19cede4ca0708767a4dbffe, type: 3}
-  playerBattleStation: {fileID: 1333734399}
-  enemyBattleStation: {fileID: 1496390135}
-  dialogueText: {fileID: 1010811452}
-  playerHUD: {fileID: 1298802699}
-  enemyHUD: {fileID: 1852361053}
-  attackButton: {fileID: 1947713005}
-  healButton: {fileID: 1854048542}
-  healMinMultiplier: 0.5
-  healMaxMultiplier: 1.5
-  damageMinMultiplier: 0.8
-  damageMaxMultiplier: 1.2
-  critChance: 0.1
-  critMultiplier: 1.5
-  battleStartDelay: 2
-  turnDelay: 1
-  buttonDelay: 0.5
-  healAmount: 10
-  levelUpAmount: 1
-  endFadeDuration: 1.5
+  _battleActions: {fileID: 79349227}
+  _menuSystem: {fileID: 852482656}
+  _screenFader: {fileID: 1147413881}
+  _playerPrefab: {fileID: 1074099462469984375, guid: 2e0c200b2b5f528458a8d68afc17698f, type: 3}
+  _enemyPrefab: {fileID: 4626300669077577570, guid: aba4bef0d19cede4ca0708767a4dbffe, type: 3}
+  _playerBattleStation: {fileID: 1333734399}
+  _enemyBattleStation: {fileID: 1496390135}
+  _dialogueText: {fileID: 1010811452}
+  _playerHUD: {fileID: 1298802699}
+  _enemyHUD: {fileID: 1852361053}
+  _attackButton: {fileID: 1947713005}
+  _healButton: {fileID: 1854048542}
+  _healMinMultiplier: 0.5
+  _healMaxMultiplier: 1.5
+  _baseHealAmount: 10
+  _damageMinMultiplier: 0.8
+  _damageMaxMultiplier: 1.2
+  _critChance: 0.1
+  _critMultiplier: 1.5
+  _levelUpAmount: 1
+  _enemyLevelMinOffset: -1
+  _enemyLevelMaxOffset: 2
+  _battleStartDelay: 2
+  _turnDelay: 2
+  _feedbackDelay: 1
+  _endMenuFadeDuration: 1
 --- !u!4 &79349229
 Transform:
   m_ObjectHideFlags: 0
@@ -1931,12 +1935,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22def704ba02c0f4d9435174972b9540, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  battleUI: {fileID: 1204950005}
-  winMenu: {fileID: 298011508}
-  loseMenu: {fileID: 61155044}
-  menuFadeDuration: 1.5
-  mainMenuSceneName: MainMenu
-  battleSystem: {fileID: 79349228}
+  _battleUI: {fileID: 1204950005}
+  _winMenu: {fileID: 298011508}
+  _loseMenu: {fileID: 61155044}
+  _battleSystem: {fileID: 79349228}
+  _menuFadeDuration: 1
+  _mainMenuSceneName: MainMenu
 --- !u!4 &852482657
 Transform:
   m_ObjectHideFlags: 0
@@ -2790,7 +2794,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e42420bf1fcfd94d8b4a1028567d699, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fadeDuration: 1.5
+  _fadeDuration: 1
+  _debugMode: 0
 --- !u!1 &1204950002
 GameObject:
   m_ObjectHideFlags: 0
@@ -3135,10 +3140,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb61bd931cdac7340958e3801753843c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debugMode: 0
-  nameText: {fileID: 1423397418}
-  levelText: {fileID: 368323443}
-  hpSlider: {fileID: 716012016}
+  _debugMode: 0
+  _nameText: {fileID: 1423397418}
+  _levelText: {fileID: 368323443}
+  _hpSlider: {fileID: 716012016}
 --- !u!1 &1324994132
 GameObject:
   m_ObjectHideFlags: 0
@@ -3940,7 +3945,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 852482656}
         m_TargetAssemblyTypeName: MenuSystemRefactored, Assembly-CSharp
-        m_MethodName: OnWinMenuSaveAndQuit
+        m_MethodName: OnWinMenuMainMenu
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -4291,7 +4296,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 852482656}
         m_TargetAssemblyTypeName: MenuSystemRefactored, Assembly-CSharp
-        m_MethodName: HideLoseMenu
+        m_MethodName: OnLoseMenuRetry
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -4430,10 +4435,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb61bd931cdac7340958e3801753843c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debugMode: 0
-  nameText: {fileID: 1324994134}
-  levelText: {fileID: 772560896}
-  hpSlider: {fileID: 350128500}
+  _debugMode: 0
+  _nameText: {fileID: 1324994134}
+  _levelText: {fileID: 772560896}
+  _hpSlider: {fileID: 350128500}
 --- !u!1 &1854048540
 GameObject:
   m_ObjectHideFlags: 0
@@ -5338,7 +5343,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 852482656}
         m_TargetAssemblyTypeName: MenuSystemRefactored, Assembly-CSharp
-        m_MethodName: HideWinMenu
+        m_MethodName: OnWinMenuNextBattle
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -5471,7 +5476,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 852482656}
         m_TargetAssemblyTypeName: MenuSystemRefactored, Assembly-CSharp
-        m_MethodName: OnLoseMenuQuit
+        m_MethodName: OnLoseMenuMainMenu
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

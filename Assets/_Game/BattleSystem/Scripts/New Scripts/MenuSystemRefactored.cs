@@ -1,113 +1,211 @@
 // -----------------------------------------------------------------------------
-// MenuSystemRefactored.cs
+// Filename: MenuSystemRefactored.cs
+// (Provided as Refactored Example)
 // -----------------------------------------------------------------------------
-// Manages transition between battle UI, win menu, lose menu, and main menu.
+// Manages transitions between different UI Canvases related to the battle:
+// the main Battle UI, the Win Menu, and the Lose Menu. Also handles returning
+// to the main menu scene. Coordinates with BattleSystem and ScreenFader.
 // -----------------------------------------------------------------------------
-using System;
+
+using System; // Needed for Action
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement; // Needed for SceneManager
 
+/// <summary>
+/// Controls UI Canvas visibility and transitions between the main battle UI,
+/// win/lose screens, and loading the main menu scene.
+/// </summary>
 public class MenuSystemRefactored : MonoBehaviour
 {
-    #region Serialized Fields
-    public Canvas battleUI;
-    public Canvas winMenu;
-    public Canvas loseMenu;
-    [Tooltip("Fade duration for menu transitions")] public float menuFadeDuration = 1f;
-    [Tooltip("Main menu scene name")] public string mainMenuSceneName;
-    public BattleSystemRefactored battleSystem;
-    #endregion
+    // -------------------------------------------------------------------------
+    // Inspector Fields
+    // -------------------------------------------------------------------------
+    [Header("UI Canvases (Assign in Inspector)")]
+    [SerializeField, Tooltip("Canvas containing the primary battle interface (HUDs, action buttons).")]
+    private Canvas _battleUI;
 
-    #region Private Fields
-    private ScreenFader _screenFader;
-    #endregion
+    [SerializeField, Tooltip("Canvas displayed when the player wins the battle.")]
+    private Canvas _winMenu;
 
-    #region Unity Callbacks
+    [SerializeField, Tooltip("Canvas displayed when the player loses the battle.")]
+    private Canvas _loseMenu;
+
+    [Header("System References (Assign in Inspector)")]
+    [SerializeField, Tooltip("Reference to the core BattleSystem controller.")]
+    private BattleSystemRefactored _battleSystem;
+
+    [Header("Transition Settings")]
+    [SerializeField, Tooltip("Default duration (seconds) for fade transitions between menus.")]
+    [Range(0.1f, 5f)] private float _menuFadeDuration = 1f;
+
+    [SerializeField, Tooltip("The exact name of the Main Menu scene asset to load.")]
+    private string _mainMenuSceneName = "MainMenuScene"; // Provide a default
+
+    // -------------------------------------------------------------------------
+    // Private Fields
+    // -------------------------------------------------------------------------
+    private ScreenFader _screenFader; // Optional component for smooth fades
+
+    // -------------------------------------------------------------------------
+    // Unity Callbacks
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Finds optional ScreenFader and sets initial menu states (Battle UI active).
+    /// Validates required references.
+    /// </summary>
     private void Awake()
     {
+        // Validate required references
+        if (_battleUI == null) Debug.LogError("[MenuSystem] Battle UI Canvas not assigned!", this);
+        if (_winMenu == null) Debug.LogError("[MenuSystem] Win Menu Canvas not assigned!", this);
+        if (_loseMenu == null) Debug.LogError("[MenuSystem] Lose Menu Canvas not assigned!", this);
+        if (_battleSystem == null) Debug.LogError("[MenuSystem] Battle System reference not assigned!", this);
+        if (string.IsNullOrEmpty(_mainMenuSceneName)) Debug.LogError("[MenuSystem] Main Menu Scene Name is not set!", this);
+
+
+        // Attempt to find the optional ScreenFader
         _screenFader = FindFirstObjectByType<ScreenFader>(FindObjectsInactive.Include);
-        SetMenuState(battleUI, true);
-        SetMenuState(winMenu, false);
-        SetMenuState(loseMenu, false);
-    }
-    #endregion
+        // No warning needed here, functionality adapts if it's null
 
-    #region Public API
-    public void ShowWinMenu() => SetMenuState(winMenu, true);
-    public void ShowLoseMenu() => SetMenuState(loseMenu, true);
-    public void HideWinMenu() => StartCoroutine(TransitionBackToBattle(winMenu));
-    public void HideLoseMenu() => StartCoroutine(TransitionBackToBattle(loseMenu));
-
-    public void OnLoseMenuQuit()
-    {
-        StartCoroutine(TransitionToMainMenu(wasLoss: true));
+        // Set initial state: Only Battle UI should be visible at start
+        SetMenuState(_battleUI, true);
+        SetMenuState(_winMenu, false);
+        SetMenuState(_loseMenu, false);
     }
 
-    public void OnWinMenuSaveAndQuit()
-    {
-        StartCoroutine(TransitionToMainMenu(wasLoss: false));
-    }
-    #endregion
+    // -------------------------------------------------------------------------
+    // Public Methods (Called by BattleSystemRefactored or UI Buttons)
+    // -------------------------------------------------------------------------
 
-    #region Helpers
-    private void SetMenuState(Canvas c, bool enabled)
+    /// <summary> Shows the Win Menu canvas. </summary>
+    public void ShowWinMenu() => SetMenuState(_winMenu, true);
+
+    /// <summary> Shows the Lose Menu canvas. </summary>
+    public void ShowLoseMenu() => SetMenuState(_loseMenu, true);
+
+    /// <summary> Hides the Win Menu and transitions back to start a new battle. </summary>
+    public void OnWinMenuNextBattle() => StartCoroutine(TransitionBackToBattleRoutine(_winMenu, false));
+
+    /// <summary> Hides the Lose Menu and transitions back to restart the battle (resets progress). </summary>
+    public void OnLoseMenuRetry() => StartCoroutine(TransitionBackToBattleRoutine(_loseMenu, true));
+
+    /// <summary> Transitions from the Lose Menu back to the Main Menu (resets progress). </summary>
+    public void OnLoseMenuMainMenu() => StartCoroutine(TransitionToMainMenuRoutine(true));
+
+    /// <summary> Transitions from the Win Menu back to the Main Menu (keeps progress). </summary>
+    public void OnWinMenuMainMenu() => StartCoroutine(TransitionToMainMenuRoutine(false));
+
+
+    // -------------------------------------------------------------------------
+    // Private Methods & Coroutines
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Enables or disables a specific menu Canvas and its interaction blocking (CanvasGroup).
+    /// </summary>
+    /// <param name="menuCanvas">The Canvas component of the menu to modify.</param>
+    /// <param name="enable">True to enable (make visible and interactable), false to disable.</param>
+    private void SetMenuState(Canvas menuCanvas, bool enable)
     {
-        if (c == null) return;
-        c.enabled = enabled;
-        var cg = c.GetComponent<CanvasGroup>();
-        if (cg != null) cg.blocksRaycasts = enabled;
+        if (menuCanvas == null) return; // Ignore if canvas is null
+
+        menuCanvas.enabled = enable;
+
+        // Also control interaction blocking via CanvasGroup if present
+        CanvasGroup canvasGroup = menuCanvas.GetComponent<CanvasGroup>();
+        if (canvasGroup != null)
+        {
+            canvasGroup.interactable = enable;
+            canvasGroup.blocksRaycasts = enable;
+            // Optional: Control alpha for instant hide/show without needing UIFader
+            // canvasGroup.alpha = enable ? 1f : 0f;
+        }
     }
 
     /// <summary>
-    /// Handles re-entry to battle after win or loss.
+    /// Coroutine handles transitioning from a win/lose menu back into the battle scene setup.
+    /// Uses ScreenFader if available. Optionally resets progress on retry.
     /// </summary>
-    public IEnumerator TransitionBackToBattle(Canvas menu)
+    /// <param name="menuToHide">The win or lose menu Canvas to hide.</param>
+    /// <param name="resetProgressOnRetry">True if progress should be reset (typically after a loss).</param>
+    private IEnumerator TransitionBackToBattleRoutine(Canvas menuToHide, bool resetProgressOnRetry)
     {
-        if (menu == loseMenu)
-            SaveManager.ResetProgress();
-
-        var cg = _screenFader.GetComponent<CanvasGroup>();
-        _screenFader.gameObject.SetActive(true);
-        cg.blocksRaycasts = true;
-
-        // 1) Fade overlay in
-        yield return UIFader.FadeInCanvasGroup(cg, menuFadeDuration);
-
-        // 2) Swap the menus behind it
-        SetMenuState(menu, false);
-        SetMenuState(battleUI, true);
-
-        // 3) ONLY do the unit & HUD setup here
-        yield return StartCoroutine(battleSystem.SetUpBattle());
-
-        // 4) Fade overlay out
-        yield return UIFader.FadeOutCanvasGroup(cg, menuFadeDuration);
-        cg.blocksRaycasts = false;
-        _screenFader.gameObject.SetActive(false);
-
-        // 5) **Now** start the turn logic
-        yield return StartCoroutine(battleSystem.StartBattle());
-    }
-
-    private IEnumerator TransitionToMainMenu(bool wasLoss)
-    {
-        // If we're returning to the main menu after a loss, clear out any saved levels
-        if (wasLoss)
-            SaveManager.ResetProgress();
-
-
-        if (_screenFader != null)
+        // Reset progress if specified (e.g., retrying after loss)
+        if (resetProgressOnRetry)
         {
-            var cg = _screenFader.GetComponent<CanvasGroup>();
-            _screenFader.gameObject.SetActive(true);
-            cg.blocksRaycasts = true;
-            yield return UIFader.FadeInCanvasGroup(cg, menuFadeDuration);
-            UnityEngine.SceneManagement.SceneManager.LoadScene(mainMenuSceneName);
+            Debug.Log("[MenuSystem] Resetting progress before retry.");
+            SaveManager.ResetProgress();
+        }
+
+        // --- Transition Logic ---
+        bool useFader = (_screenFader != null);
+        CanvasGroup fadeCanvasGroup = useFader ? _screenFader.GetComponent<CanvasGroup>() : null;
+        if (useFader && fadeCanvasGroup == null) useFader = false; // Fader exists but no CanvasGroup? Disable fade.
+
+        if (useFader)
+        {
+            // --- Smooth Fade Transition ---
+            _screenFader.gameObject.SetActive(true); // Ensure fader is active
+            fadeCanvasGroup.blocksRaycasts = true;   // Block input
+
+            // 1. Fade overlay IN
+            yield return StartCoroutine(UIFader.FadeInCanvasGroup(fadeCanvasGroup, _menuFadeDuration));
+
+            // 2. Swap menus and setup battle behind the overlay
+            SetMenuState(menuToHide, false); // Hide Win/Lose menu
+            SetMenuState(_battleUI, true);   // Show Battle UI (though overlay covers it)
+            yield return StartCoroutine(_battleSystem.SetupBattleRoutine()); // Setup units, HUDs
+
+            // 3. Fade overlay OUT
+            yield return StartCoroutine(UIFader.FadeOutCanvasGroup(fadeCanvasGroup, _menuFadeDuration));
+
+            // 4. Restore interaction
+            fadeCanvasGroup.blocksRaycasts = false;
+            // Do not disable _screenFader GameObject here
         }
         else
         {
-            UnityEngine.SceneManagement.SceneManager.LoadScene(mainMenuSceneName);
+            // --- Instant Transition (No Fader) ---
+            SetMenuState(menuToHide, false);
+            SetMenuState(_battleUI, true);
+            yield return StartCoroutine(_battleSystem.SetupBattleRoutine());
+        }
+
+        // 5. Start the battle flow (turn sequence)
+        yield return StartCoroutine(_battleSystem.StartBattleRoutine());
+    }
+
+    /// <summary>
+    /// Coroutine handles transitioning back to the main menu scene.
+    /// Uses ScreenFader if available. Optionally resets progress.
+    /// </summary>
+    /// <param name="resetProgress">True if progress should be reset before returning to main menu.</param>
+    private IEnumerator TransitionToMainMenuRoutine(bool resetProgress)
+    {
+        // Reset progress if specified (e.g., quitting after loss)
+        if (resetProgress)
+        {
+            Debug.Log("[MenuSystem] Resetting progress before returning to Main Menu.");
+            SaveManager.ResetProgress();
+        }
+
+        // --- Transition Logic ---
+        bool useFader = (_screenFader != null);
+        // Note: Scene load will happen regardless of fader success after yield
+
+        if (useFader)
+        {
+            // Use the ScreenFader's built-in scene loading
+            _screenFader.StartFadeOutAndLoadScene(_mainMenuSceneName);
+            yield return null; // Allow fader coroutine to start before this one ends
+        }
+        else
+        {
+            // Load instantly if no fader
+            SceneManager.LoadScene(_mainMenuSceneName);
+            yield break; // Exit coroutine after instant load
         }
     }
-    #endregion
 }

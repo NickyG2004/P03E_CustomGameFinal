@@ -423,11 +423,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1fb6c96e9e41d3841986b4dac5b94fd4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debugMode: 1
   _battleSceneName: Level01
   _levelSong: {fileID: 8300000, guid: 5915a8f2274a67b4fb20a07d805122ed, type: 3}
   _menuMusicClip: {fileID: 8300000, guid: 5e8ed54981e3dd64b913ccfb15729e8d, type: 3}
   _menuMusicFadeTime: 1.5
+  _debugMode: 0
 --- !u!82 &373553320
 AudioSource:
   m_ObjectHideFlags: 0
@@ -690,7 +690,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81b01a880f5c48b429eacd9c6d4cdd62, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sfxVolume: 1
+  _introSong: {fileID: 8300000, guid: 5e8ed54981e3dd64b913ccfb15729e8d, type: 3}
+  _introFadeDuration: 1.5
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -791,7 +792,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e42420bf1fcfd94d8b4a1028567d699, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fadeDuration: 1.5
+  _fadeDuration: 1
+  _debugMode: 0
 --- !u!225 &1374455880
 CanvasGroup:
   m_ObjectHideFlags: 0

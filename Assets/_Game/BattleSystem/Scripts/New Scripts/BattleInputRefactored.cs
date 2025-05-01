@@ -1,31 +1,94 @@
 // -----------------------------------------------------------------------------
-// BattleInputRefactored.cs
+// Filename: BattleInputRefactored.cs
+// (Provided as Refactored Example)
 // -----------------------------------------------------------------------------
-// Routes UI button callbacks to BattleActionsRefactored methods.
+// Routes UI button callbacks (assigned in the Inspector) to the appropriate
+// action coroutines in BattleActionsRefactored.
+// Ensures player input is only processed during the PLAYERTURN state.
 // -----------------------------------------------------------------------------
-using UnityEngine;
 
+using UnityEngine;
+// using System.Collections; // Not needed currently
+
+/// <summary>
+/// Connects UI Button onClick events (assigned in Inspector) to battle action methods
+/// in the BattleActionsRefactored component. Ensures input is only processed
+/// when the BattleSystemRefactored is in the PLAYERTURN state.
+/// </summary>
 [RequireComponent(typeof(BattleSystemRefactored), typeof(BattleActionsRefactored))]
 public class BattleInputRefactored : MonoBehaviour
 {
-    private BattleSystemRefactored _bs;
-    private BattleActionsRefactored _ba;
+    // -------------------------------------------------------------------------
+    // Private Fields (Cached References)
+    // -------------------------------------------------------------------------
+    private BattleSystemRefactored _battleSystem;
+    private BattleActionsRefactored _battleActions;
 
+    // -------------------------------------------------------------------------
+    // Unity Callbacks
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Caches the required BattleSystem and BattleActions components.
+    /// </summary>
     private void Awake()
     {
-        _bs = GetComponent<BattleSystemRefactored>();
-        _ba = GetComponent<BattleActionsRefactored>();
+        _battleSystem = GetComponent<BattleSystemRefactored>();
+        _battleActions = GetComponent<BattleActionsRefactored>();
+
+        // Validate references
+        if (_battleSystem == null) Debug.LogError("[BattleInput] BattleSystemRefactored component not found!", this);
+        if (_battleActions == null) Debug.LogError("[BattleInput] BattleActionsRefactored component not found!", this);
     }
 
+    // -------------------------------------------------------------------------
+    // UI Button Callbacks (Assign these methods to Button onClick events in Inspector)
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Called when the Attack button is clicked.
+    /// Validates it's the player's turn before starting the PlayerAttackRoutine.
+    /// </summary>
     public void OnAttackButton()
     {
-        if (_bs.state != BattleState.PLAYERTURN) return;
-        StartCoroutine(_ba.PlayerAttack());
+        // Only allow action if the battle system and actions components are valid
+        // and the game state is PLAYERTURN.
+        if (_battleSystem != null && _battleActions != null && _battleSystem.State == BattleState.PLAYERTURN)
+        {
+            StartCoroutine(_battleActions.PlayerAttackRoutine());
+        }
+        else if (_battleSystem != null && _battleSystem.State != BattleState.PLAYERTURN)
+        {
+            // Optional: Log or give feedback if clicked during wrong turn
+            // Debug.Log("[BattleInput] Attack button clicked, but not player's turn.");
+        }
     }
 
+    /// <summary>
+    /// Called when the Heal button is clicked.
+    /// Validates it's the player's turn before starting the PlayerHealRoutine.
+    /// </summary>
     public void OnHealButton()
     {
-        if (_bs.state != BattleState.PLAYERTURN) return;
-        StartCoroutine(_ba.PlayerHeal());
+        // Only allow action if the battle system and actions components are valid
+        // and the game state is PLAYERTURN.
+        if (_battleSystem != null && _battleActions != null && _battleSystem.State == BattleState.PLAYERTURN)
+        {
+            StartCoroutine(_battleActions.PlayerHealRoutine());
+        }
+        else if (_battleSystem != null && _battleSystem.State != BattleState.PLAYERTURN)
+        {
+            // Optional: Log or give feedback if clicked during wrong turn
+            // Debug.Log("[BattleInput] Heal button clicked, but not player's turn.");
+        }
     }
+
+    // TODO: Add OnDefendButton() when defend action is implemented
+    // public void OnDefendButton()
+    // {
+    //     if (_battleSystem != null && _battleActions != null && _battleSystem.State == BattleState.PLAYERTURN)
+    //     {
+    //         // StartCoroutine(_battleActions.PlayerDefendRoutine());
+    //     }
+    // }
 }
