@@ -55,7 +55,8 @@ public class BattleSystemRefactored : MonoBehaviour
     private Button _attackButton;
     [SerializeField, Tooltip("Reference to the Heal action button.")]
     private Button _healButton;
-    // TODO: [SerializeField] private Button _defendButton; // placeholder for future defend action
+    [SerializeField, Tooltip("Reference to the Defend action button.")]
+    private Button _defendButton;
 
     [Header("Gameplay Settings - Healing")]
     [SerializeField, Tooltip("Minimum healing amount multiplier (based on Player Level).")]
@@ -75,6 +76,24 @@ public class BattleSystemRefactored : MonoBehaviour
     [SerializeField, Tooltip("Damage multiplier applied on a critical hit (e.g., 1.5 for 50% extra damage).")]
     [Min(1f)] private float _critMultiplier = 1.5f;
 
+
+    [Header("Gameplay Settings - Accuracy")]
+    [Range(0f, 1f)] // Represent as a probability (0.0 = 0% hit, 1.0 = 100% hit)
+    [SerializeField, Tooltip("Base chance for any attack to HIT (e.g., 0.95 = 95% hit chance / 5% miss chance). Speed modifies this.")]
+    private float _baseHitChance = 0.95f; // Default to 95% base hit chance
+
+    [Range(0f, 0.1f)] // Keep this factor small for subtle effect
+    [SerializeField, Tooltip("How much Speed difference affects hit chance (e.g., 0.01 means +/- 1% hit chance per point of speed difference). Set to 0 to disable speed effect.")]
+    private float _accuracySpeedFactor = 0.01f; // Default: 1% change per speed point difference
+
+    [Range(0f, 1f)]
+    [SerializeField, Tooltip("Absolute minimum possible hit chance after all modifications (e.g., 0.05 = 5% minimum hit chance).")]
+    private float _minHitChance = 0.05f; // Default: 5% minimum chance to hit
+
+    [Range(0f, 1f)]
+    [SerializeField, Tooltip("Absolute maximum possible hit chance after all modifications (e.g., 1.0 = 100% maximum hit chance).")]
+    private float _maxHitChance = 1.0f; // Default: 100% max chance (can cap lower if desired)
+
     [Header("Gameplay Settings - Leveling")]
     [SerializeField, Tooltip("Number of levels the player gains upon winning a battle.")]
     [Min(0)] private int _levelUpAmount = 1;
@@ -90,6 +109,11 @@ public class BattleSystemRefactored : MonoBehaviour
     [Range(0f, 5f)] private float _turnDelay = 2f;
     [SerializeField, Tooltip("Short delay (seconds) used for UI feedback like button presses or brief messages.")]
     [Range(0f, 5f)] private float _feedbackDelay = 1.0f; // Renamed from _buttonDelay
+
+    // Add within Inspector Fields region, e.g., near Timing or Transitions
+    [Header("Visuals")]
+    [SerializeField, Tooltip("How long (in seconds) it takes for a defeated unit to fade out.")]
+    [Range(0.1f, 3.0f)] private float _unitFadeOutDuration = 1.0f;
 
     [Header("Transitions")]
     [SerializeField, Tooltip("Duration (seconds) for fade transitions when showing win/lose menus.")]
@@ -122,6 +146,10 @@ public class BattleSystemRefactored : MonoBehaviour
     public float CritMultiplier => _critMultiplier;
     public float HealMinMultiplier => _healMinMultiplier;
     public float HealMaxMultiplier => _healMaxMultiplier;
+    public float BaseHitChance => _baseHitChance;
+    public float AccuracySpeedFactor => _accuracySpeedFactor;
+    public float MinHitChance => _minHitChance;
+    public float MaxHitChance => _maxHitChance;
     public float TurnDelay => _turnDelay;
     public float FeedbackDelay => _feedbackDelay;
 
@@ -152,6 +180,7 @@ public class BattleSystemRefactored : MonoBehaviour
         if (_dialogueText == null) Debug.LogError("[BattleSystem] Dialogue Text UI reference not set!", this);
         if (_playerHUD == null || _enemyHUD == null) Debug.LogError("[BattleSystem] Player or Enemy HUD reference not set!", this);
         if (_attackButton == null || _healButton == null) Debug.LogError("[BattleSystem] Action Button(s) not set!", this);
+        if (_defendButton == null) Debug.LogError("[BattleSystem] Defend Button not set!", this);
 
         // ScreenFader is optional, check found by FindFirstObjectByType (now serialized field)
         // _screenFader = FindFirstObjectByType<ScreenFader>(FindObjectsInactive.Include);
@@ -200,6 +229,9 @@ public class BattleSystemRefactored : MonoBehaviour
         Debug.Log("[BattleSystem] Setting up battle...");
         // Clear previous units if any (for potential restarts without scene reload)
         ClearExistingUnits();
+
+        // Re-Read the players level from the Save Manager
+        _currentPlayerLevel = SaveManager.PlayerLevel;
 
         // Instantiate and initialize player
         PlayerUnit = InstantiateAndInitUnit(_playerPrefab, _playerBattleStation, _currentPlayerLevel);
@@ -256,6 +288,10 @@ public class BattleSystemRefactored : MonoBehaviour
     public IEnumerator PlayerTurnRoutine() // Made public for BattleActions
     {
         State = BattleState.PLAYERTURN;
+
+        // --- Add Defend Status Clear ---
+        if (PlayerUnit != null) PlayerUnit.EndDefending(); // Stop defending at start of turn
+
         yield return ShowDialogRoutine("Choose an action:"); // Update dialogue
         SetActionButtonsInteractable(true); // Enable player input
         // Execution now waits for a button press handled by BattleInputRefactored
@@ -309,20 +345,38 @@ public class BattleSystemRefactored : MonoBehaviour
     {
         SetActionButtonsInteractable(false); // Ensure buttons are off
         ShowResultDialog(playerWon);         // Display Win/Lose message
-        yield return new WaitForSeconds(_turnDelay); // Pause on message
 
-        ProcessPostBattle(playerWon);        // Handle level up / save logic
+        // --- START FADE OUT DEFEATED UNIT ---
+        GameObject defeatedUnitInstance = playerWon ? _enemyUnitInstance : _playerUnitInstance;
+        if (defeatedUnitInstance != null)
+        {
+            SpriteRenderer defeatedSprite = defeatedUnitInstance.GetComponentInChildren<SpriteRenderer>(); // Find the sprite
+            if (defeatedSprite != null)
+            {
+                StartCoroutine(FadeOutSpriteRoutine(defeatedSprite, _unitFadeOutDuration));
+                // We start the coroutine but DON'T yield return on it,
+                // allowing the fade to happen concurrently with the delay below.
+            }
+            else
+            {
+                Debug.LogWarning($"[BattleSystem] Could not find SpriteRenderer on defeated unit '{defeatedUnitInstance.name}' to fade out.", defeatedUnitInstance);
+            }
+        }
+        // --- END FADE OUT ---
+
+        yield return new WaitForSeconds(_turnDelay); // Pause on Win/Lose message (while unit fades)
+
+        ProcessPostBattle(playerWon);        // Handle level up / save logic (happens after delay/fade starts)
 
         // Fade to the correct menu (Win or Lose) using the MenuSystem
         if (_menuSystem != null)
         {
-            yield return StartCoroutine(FadeToMenuRoutine(playerWon ? _menuSystem.ShowWinMenu : _menuSystem.ShowLoseMenu));
+            yield return StartCoroutine(FadeToMenuRoutine(GetMenuAction(playerWon))); // Use coroutine
         }
         else
         {
             Debug.LogError("[BattleSystem] MenuSystem reference is missing, cannot transition to end menu!", this);
         }
-
     }
 
     // -------------------------------------------------------------------------
@@ -455,7 +509,7 @@ public class BattleSystemRefactored : MonoBehaviour
         {
             Debug.Log($"[BattleSystem] Player won! Leveling up from {PlayerUnit.Level} by {_levelUpAmount}.");
             PlayerUnit.LevelUp(_levelUpAmount);
-            if (_playerHUD != null) _playerHUD.SetHUD(PlayerUnit); // Update HUD with new level
+            // if (_playerHUD != null) _playerHUD.SetHUD(PlayerUnit); // Update HUD with new level
                                                                    // Save the player's new level
             SaveManager.PlayerLevel = PlayerUnit.Level;
             // Optionally update BestLevel
@@ -534,6 +588,44 @@ public class BattleSystemRefactored : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Coroutine to fade out a SpriteRenderer's alpha over time.
+    /// </summary>
+    /// <param name="spriteRenderer">The SpriteRenderer to fade.</param>
+    /// <param name="duration">Fade duration in seconds.</param>
+    private IEnumerator FadeOutSpriteRoutine(SpriteRenderer spriteRenderer, float duration)
+    {
+        if (spriteRenderer == null)
+        {
+            Debug.LogWarning("[BattleSystem] Tried to fade a null SpriteRenderer.", this);
+            yield break;
+        }
+
+        float actualDuration = Mathf.Max(0.01f, duration); // Ensure positive duration
+        float timeElapsed = 0f;
+        Color startColor = spriteRenderer.color;
+        Color endColor = new Color(startColor.r, startColor.g, startColor.b, 0f); // Target alpha 0
+
+        while (timeElapsed < actualDuration)
+        {
+            // Check if the object was destroyed mid-fade
+            if (spriteRenderer == null) yield break;
+
+            timeElapsed += Time.deltaTime;
+            float progress = Mathf.Clamp01(timeElapsed / actualDuration);
+            spriteRenderer.color = Color.Lerp(startColor, endColor, progress);
+            yield return null;
+        }
+
+        // Ensure final state if object still exists
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = endColor;
+        }
+        // Optional: Could disable the GameObject here after fade?
+        // if (spriteRenderer != null) spriteRenderer.gameObject.SetActive(false);
+    }
+
 
     /// <summary>
     /// Toggles the interactable state of the player action buttons.
@@ -543,7 +635,7 @@ public class BattleSystemRefactored : MonoBehaviour
     {
         if (_attackButton != null) _attackButton.interactable = enable;
         if (_healButton != null) _healButton.interactable = enable;
-        // if (_defendButton != null) _defendButton.interactable = enable; // TODO
+        if (_defendButton != null) _defendButton.interactable = enable;
     }
 }
 

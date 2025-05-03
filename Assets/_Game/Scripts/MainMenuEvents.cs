@@ -41,6 +41,17 @@ public class MainMenuEvents : MonoBehaviour
     [Tooltip("Enable detailed logs for menu actions.")]
     [SerializeField] private bool _debugMode = false; // Default false is usually better
 
+    [Header("High Score Display")]
+    [Tooltip("The exact name of the Label element in the UI Toolkit document used to display the high score.")]
+    [SerializeField] private string _highScoreLabelName = "HighScore"; // Default name
+
+    [Tooltip("The exact name of the optional Button element used to reset ALL saved progress (including high score).")]
+    [SerializeField] private string _resetHighScoreButtonName = "ResetButton"; // Default name
+
+    [Header("Reset Fade")]
+    [Tooltip("Duration for the quick fade out/in when resetting high score.")]
+    [SerializeField, Range(0.1f, 1.0f)] private float _resetFadeDuration = 0.25f; // Quick fade
+
     #endregion
 
     #region Private Fields
@@ -59,6 +70,7 @@ public class MainMenuEvents : MonoBehaviour
     // Button References (Cached for UnregisterCallback)
     private Button _startButton;
     private Button _continueButton;
+    private Button _resetHighScoreButton; // Optional reset button
     // private Button _settingsButton; // TODO: Uncomment and implement when settings menu is ready
     private Button _settingsBackButton;
     private Button _quitButton;
@@ -67,6 +79,9 @@ public class MainMenuEvents : MonoBehaviour
 
     // List for managing universal SFX binding/unbinding
     private readonly List<Button> _allBoundButtons = new List<Button>();
+
+    // high score label
+    private Label _highScoreLabel; // UI Toolkit Label element
 
     #endregion
 
@@ -131,6 +146,7 @@ public class MainMenuEvents : MonoBehaviour
         // Query specific buttons
         _startButton = _rootVisualElement.Q<Button>("StartButton");
         _continueButton = _rootVisualElement.Q<Button>("ContinueButton");
+
         // _settingsButton = _rootVisualElement.Q<Button>("SettingsButton"); // TODO
         _settingsBackButton = _rootVisualElement.Q<Button>("SettingsBackButton");
         _quitButton = _rootVisualElement.Q<Button>("QuitButton");
@@ -140,6 +156,21 @@ public class MainMenuEvents : MonoBehaviour
         // Log warnings for missing standard buttons (helps UI debugging)
         if (_startButton == null) Debug.LogWarning("[MainMenuEvents] 'StartButton' not found in UXML.", this);
         if (_quitButton == null) Debug.LogWarning("[MainMenuEvents] 'QuitButton' not found in UXML.", this);
+
+        // high score label and reset button
+        _highScoreLabel = _rootVisualElement.Q<Label>(_highScoreLabelName);
+        _resetHighScoreButton = _rootVisualElement.Q<Button>(_resetHighScoreButtonName);
+
+        // Optional: Add warnings if elements are not found
+        if (_highScoreLabel == null)
+        {
+            Debug.LogWarning($"[MainMenuEvents] High Score Label element named '{_highScoreLabelName}' not found in UXML. High score will not be displayed.", this);
+        }
+        if (_resetHighScoreButton == null)
+        {
+            // This is optional, so maybe only log in debug mode
+            if (_debugMode) Debug.Log($"[MainMenuEvents] Optional Reset High Score Button named '{_resetHighScoreButtonName}' not found in UXML.", this);
+        }
     }
 
     /// <summary> Registers callbacks for specific buttons and a universal SFX callback for all buttons. </summary>
@@ -148,6 +179,7 @@ public class MainMenuEvents : MonoBehaviour
         // Bind specific actions using the helper
         BindButtonAction(_startButton, OnPlayGameClick);
         BindButtonAction(_continueButton, OnContinueClick);
+        BindButtonAction(_resetHighScoreButton, OnResetHighScoreClick); // Bind the reset button if found
         // BindButtonAction(_settingsButton, OnSettingsButtonClick); // TODO
         BindButtonAction(_settingsBackButton, OnSettingsBackButtonClick);
         BindButtonAction(_quitButton, OnQuitButtonClick);
@@ -174,6 +206,8 @@ public class MainMenuEvents : MonoBehaviour
     /// <summary> Unregisters all specific actions and universal SFX callbacks. </summary>
     private void UnbindButtonCallbacks()
     {
+
+        _resetHighScoreButton?.UnregisterCallback<ClickEvent>(OnResetHighScoreClick);
         // Use the cached list to unregister everything
         foreach (var btn in _allBoundButtons)
         {
@@ -184,6 +218,7 @@ public class MainMenuEvents : MonoBehaviour
             // This is slightly overkill but ensures cleanup if structure changes.
             btn.UnregisterCallback<ClickEvent>(OnPlayGameClick);
             btn.UnregisterCallback<ClickEvent>(OnContinueClick);
+
             // btn.UnregisterCallback<ClickEvent>(OnSettingsButtonClick); // TODO
             btn.UnregisterCallback<ClickEvent>(OnSettingsBackButtonClick);
             btn.UnregisterCallback<ClickEvent>(OnQuitButtonClick);
@@ -212,6 +247,8 @@ public class MainMenuEvents : MonoBehaviour
 
             if (_debugMode) Debug.Log($"[MainMenuEvents] Continue button {(canContinue ? "enabled" : "disabled")} (PlayerLevel={savedLevel})", this);
         }
+
+        UpdateHighScoreDisplay(); // Set the initial high score text
     }
 
     /// <summary> Helper: Binds a specific action callback to a button and adds it to the tracking list. </summary>
@@ -279,7 +316,7 @@ public class MainMenuEvents : MonoBehaviour
         if (_debugMode) Debug.Log("[MainMenuEvents] 'Start New Game' button clicked.", this);
 
         // Reset progress using SaveManager static class
-        SaveManager.PlayerLevel = 4;
+        SaveManager.PlayerLevel = 1;
         SaveManager.EnemyLevel = 1;
         // Note: SaveManager properties handle PlayerPrefs.Save() internally
 
@@ -339,6 +376,21 @@ public class MainMenuEvents : MonoBehaviour
         ShowRootMenu(); // Return to main menu
     }
 
+    /// <summary>
+    /// Handles the click event for the optional "Reset High Score" button.
+    /// Calls SaveManager to reset ALL progress and updates the display.
+    /// </summary>
+    /// <summary>
+    /// Handles the click event for the optional "Reset High Score" button.
+    /// Starts the ResetWithFadeRoutine coroutine.
+    /// </summary>
+    private void OnResetHighScoreClick(ClickEvent evt)
+    {
+        if (_debugMode) Debug.Log("[MainMenuEvents] Reset High Score button clicked. Starting fade routine.", this);
+        // Start the coroutine that handles the fade and actions
+        StartCoroutine(ResetWithFadeRoutine());
+    }
+
     /// <summary> Universal callback for playing SFX on any button click that had an action bound. </summary>
     private void OnAnyButtonClickSFX(ClickEvent evt)
     {
@@ -348,6 +400,20 @@ public class MainMenuEvents : MonoBehaviour
             _audioSource.PlayOneShot(_audioSource.clip);
         }
         // No debug log by default for SFX, can be noisy. Add if needed.
+    }
+
+    /// <summary>
+    /// Updates the high score label's text with the value from SaveManager.
+    /// Does nothing if the label element wasn't found.
+    /// </summary>
+    private void UpdateHighScoreDisplay()
+    {
+        if (_highScoreLabel != null)
+        {
+            int bestLevel = SaveManager.BestLevel;
+            // Format the text however you like
+            _highScoreLabel.text = $"High Score: Level {bestLevel}";
+        }
     }
 
     #endregion
@@ -404,5 +470,77 @@ public class MainMenuEvents : MonoBehaviour
         }
     }
 
+    #endregion
+
+    #region Helper IEnumarators
+    /// <summary>
+    /// Coroutine to handle fading out, resetting data, updating UI, and fading back in.
+    /// Uses the ScreenFader if available.
+    /// </summary>
+    /// <summary>
+    /// Coroutine to handle fading out the menu, resetting data, updating UI,
+    /// and fading the menu back in.
+    /// </summary>
+    /// <summary>
+    /// Coroutine to handle fading screen to black, resetting data, updating UI,
+    /// pausing briefly, and fading screen back in. Uses the ScreenFader.
+    /// </summary>
+    private System.Collections.IEnumerator ResetWithFadeRoutine()
+    {
+        // Try to get the CanvasGroup from the ScreenFader
+        CanvasGroup fadeCanvasGroup = _screenFader?.GetComponent<CanvasGroup>();
+        bool useFade = (fadeCanvasGroup != null);
+
+        // --- Phase 1: Fade TO Black ---
+        if (useFade)
+        {
+            if (_debugMode) Debug.Log("[MainMenuEvents] Starting fade TO black for reset.");
+            _screenFader.gameObject.SetActive(true); // Ensure fader is active
+            fadeCanvasGroup.blocksRaycasts = true;  // Block input during fade
+            // Start fading TO black and wait for it to complete
+            yield return StartCoroutine(UIFader.FadeInCanvasGroup(fadeCanvasGroup, _resetFadeDuration));
+            // Screen is now expected to be black
+            if (_debugMode) Debug.Log("[MainMenuEvents] Fade TO black complete.");
+        }
+
+        // --- Phase 2: Perform Actions WHILE Screen is Black ---
+        if (_debugMode) Debug.Log("[MainMenuEvents] Performing reset actions while screen is faded.");
+        SaveManager.ResetAllProgress(); // Reset the data
+        UpdateHighScoreDisplay();       // Update the label text
+        if (_continueButton != null)    // Update the continue button visibility
+        {
+            _continueButton.style.display = DisplayStyle.None;
+        }
+        // No need for MarkDirtyRepaint here, the pause should suffice
+
+        // --- Phase 3: Wait/Pause WHILE Screen is Black ---
+        if (useFade)
+        {
+            // *** Explicit wait WHILE screen is black ***
+            // Start with 0.1 seconds. Increase if you still see the button disappear too early.
+            float pauseDuration = 0.1f;
+            if (_debugMode) Debug.Log($"[MainMenuEvents] Pausing for {pauseDuration}s while screen is black.");
+            yield return new WaitForSeconds(pauseDuration);
+        }
+
+        // --- Phase 4: Fade FROM Black ---
+        if (useFade)
+        {
+            if (_debugMode) Debug.Log("[MainMenuEvents] Starting fade FROM black.");
+            // Now start fading FROM black
+            yield return StartCoroutine(UIFader.FadeOutCanvasGroup(fadeCanvasGroup, _resetFadeDuration));
+            fadeCanvasGroup.blocksRaycasts = false; // Unblock input after fading in
+            if (_debugMode) Debug.Log("[MainMenuEvents] Fade FROM black complete.");
+            // Optional: Deactivate ScreenFader? Depends if it's needed elsewhere.
+            // _screenFader.gameObject.SetActive(false);
+        }
+
+        // Optional: Play a confirmation sound here after fade-in (if using fade) or after actions (if not fading)
+        // if (_audioSource != null && someResetConfirmationClip != null) {
+        //     _audioSource.PlayOneShot(someResetConfirmationClip);
+        // }
+
+        if (_debugMode) Debug.Log("[MainMenuEvents] ResetWithFadeRoutine finished.");
+    }
     #endregion
 }

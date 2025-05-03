@@ -49,7 +49,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _baseHP: 20
   _hpGrowthFactor: 2.5
-  _baseDamage: 5
+  _baseDamage: 73
   _damageGrowthFactor: 1.5
   _baseSpeed: 10
   _speedGrowthPerLevel: 0.5

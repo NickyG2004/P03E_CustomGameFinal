@@ -29,6 +29,10 @@ public class UnitRefactored : MonoBehaviour
     [Tooltip("Component that tracks and manages HP. Must be assigned.")]
     [SerializeField] private HealthComponent _healthComponent;
 
+    [Header("Defense Configuration")]
+    [SerializeField, Tooltip("Constant used in damage reduction formula when defending: Multiplier = DefConstant / (DefConstant + Defense). Higher values mean Defense matters less initially.")]
+    [Min(1f)] private float _defenseConstant = 100f; // Default: 100 is common
+
     #endregion
 
     #region Private State
@@ -36,6 +40,7 @@ public class UnitRefactored : MonoBehaviour
     private int _level;
     private int _damageValue;
     private int _speedValue;
+    private int _defenseValue;
 
     #endregion
 
@@ -86,13 +91,15 @@ public class UnitRefactored : MonoBehaviour
             _level,
             out int calculatedMaxHP,
             out int calculatedDamage,
-            out int calculatedSpeed
+            out int calculatedSpeed,
+            out int calculatedDefense
         );
 
         // Apply HP via HealthComponent and store internal stat values
         _healthComponent.Initialize(calculatedMaxHP);
         _damageValue = calculatedDamage;
         _speedValue = calculatedSpeed;
+        _defenseValue = calculatedDefense;
 
         // Optional: Log successful initialization (useful for debugging)
         // Debug.Log($"[Unit] '{UnitName}' initialized: Level={Level}, MaxHP={MaxHP}, BaseDamage={BaseDamage}, Speed={Speed}", this);
@@ -115,19 +122,50 @@ public class UnitRefactored : MonoBehaviour
     }
 
     /// <summary>
-    /// Applies damage to this unit via its HealthComponent.
+    /// Applies damage to this unit. If the unit IsDefending, damage is reduced (halved, minimum 1).
+    /// Passes the final damage amount to the HealthComponent.
     /// Logs an error if the HealthComponent is missing.
     /// </summary>
-    /// <param name="damageAmount">The amount of damage to apply.</param>
+    /// <param name="damageAmount">The initial amount of damage before reduction.</param>
     /// <returns>True if the unit is defeated (HP <= 0) after taking damage, false otherwise or if HealthComponent is missing.</returns>
     public bool TakeDamage(int damageAmount)
     {
         if (_healthComponent == null)
         {
             Debug.LogError($"[Unit] HealthComponent missing on {gameObject.name}. Cannot take damage.", this);
-            return false; // Cannot determine defeat state
+            return false;
         }
-        return _healthComponent.TakeDamage(damageAmount);
+
+        // Start with the original damage
+        int actualDamage = damageAmount;
+
+        // --- Apply Defense Reduction ---
+        if (IsDefending)
+        {
+            // Use the unit's Defense stat (which comes from StatsCalculator)
+            float effectiveDefense = Mathf.Max(0f, Defense); // Ensure defense isn't negative
+
+            // Calculate the damage multiplier using the formula
+            // Multiplier = DefenseConstant / (DefenseConstant + Defense)
+            // Ensures division by zero is impossible if _defenseConstant >= 1 and effectiveDefense >= 0
+            float damageMultiplier = _defenseConstant / (_defenseConstant + effectiveDefense);
+
+            // Apply the multiplier to the incoming damage
+            float reducedDamageFloat = actualDamage * damageMultiplier;
+
+            // Round to the nearest integer and ensure at least 1 damage is dealt
+            int reducedDamageInt = Mathf.Max(1, Mathf.RoundToInt(reducedDamageFloat));
+
+            // Log the details for debugging/tuning
+            Debug.Log($"[{UnitName}] Defending! Defense:{Defense}, Multiplier:{damageMultiplier:F2}. Damage reduced from {actualDamage} to {reducedDamageInt}.");
+
+            // Update the actual damage to be applied
+            actualDamage = reducedDamageInt;
+        }
+        // --- End Defense Reduction ---
+
+        // Pass the final (potentially reduced) damage to the HealthComponent
+        return _healthComponent.TakeDamage(actualDamage);
     }
 
     /// <summary>
@@ -143,6 +181,25 @@ public class UnitRefactored : MonoBehaviour
             return;
         }
         _healthComponent.Heal(healAmount);
+    }
+
+    /// <summary> Sets the unit's state to Defending. </summary>
+    public void StartDefending()
+    {
+        IsDefending = true;
+        // Optional: Add visual feedback later (e.g., enable shield icon, play sound)
+        // Debug.Log($"[{UnitName}] Started Defending.");
+    }
+
+    /// <summary> Resets the unit's Defending state to false. </summary>
+    public void EndDefending()
+    {
+        if (IsDefending) // Only log/update visuals if it was actually true
+        {
+            IsDefending = false;
+            // Optional: Add visual feedback later (e.g., disable shield icon)
+            // Debug.Log($"[{UnitName}] Ended Defending.");
+        }
     }
 
     /// <summary>
@@ -235,6 +292,12 @@ public class UnitRefactored : MonoBehaviour
 
     /// <summary> Gets the calculated speed value of the unit for its current level. </summary>
     public int Speed => _speedValue;
+
+    /// <summary> Gets whether the unit is currently in a defending state. </summary>
+    public bool IsDefending { get; private set; } = false; // Default to false
+
+    /// <summary> Gets the calculated defense value of the unit for its current level. </summary>
+    public int Defense => _defenseValue;
 
     #endregion
 }

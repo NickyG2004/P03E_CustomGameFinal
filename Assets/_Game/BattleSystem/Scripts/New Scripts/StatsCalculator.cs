@@ -40,6 +40,14 @@ public class StatsCalculator : MonoBehaviour
     [Tooltip("Flat speed increase added per level beyond level 1 (linear growth). Must be non-negative.")]
     [SerializeField, Min(0f)] private float _speedGrowthPerLevel = 0.5f; // Default value
 
+    // Add inside the Inspector Fields region
+    [Header("Defense Scaling")]
+    [Tooltip("Base defense value at level 1. Reduces incoming damage when defending. Must be non-negative.")]
+    [SerializeField, Min(0)] private int _baseDefense = 2; // Start with some base defense
+
+    [Tooltip("Flat defense increase added per level beyond level 1 (linear growth). Must be non-negative.")]
+    [SerializeField, Min(0f)] private float _defenseGrowthPerLevel = 0.25f; // Slower growth than speed maybe
+
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
@@ -53,7 +61,7 @@ public class StatsCalculator : MonoBehaviour
     /// <param name="hp">Output: Computed hit points (guaranteed >= 1).</param>
     /// <param name="dmg">Output: Computed damage (guaranteed >= 1).</param>
     /// <param name="spd">Output: Computed speed (guaranteed >= 1).</param>
-    public void CalculateStats(int level, out int hp, out int dmg, out int spd)
+    public void CalculateStats(int level, out int hp, out int dmg, out int spd, out int def)
     {
         // Clamp the input level to ensure it's at least 1
         int calculationLevel = Mathf.Max(1, level);
@@ -69,6 +77,9 @@ public class StatsCalculator : MonoBehaviour
         // Speed: Linear scaling, rounded to nearest
         float rawSpd = _baseSpeed + _speedGrowthPerLevel * (calculationLevel - 1);
 
+        // Defense: Linear scaling
+        def = CalculateDefenseInternal(calculationLevel);
+
         // --- Clamp and Assign Output Values ---
 
         // Ensure final HP is at least 1
@@ -80,7 +91,26 @@ public class StatsCalculator : MonoBehaviour
         // Ensure final Speed is at least 1
         spd = Mathf.Max(1, Mathf.RoundToInt(rawSpd));
 
+
         // Optional: Log calculated stats for debugging
         // Debug.Log($"[{gameObject.name}/StatsCalculator] Lvl {level} (Calc as {calculationLevel}) -> HP:{hp}, DMG:{dmg}, SPD:{spd}", this);
+    }
+
+    // -------------------------------------------------------------------------
+    // Private Helper Method
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Computes the scaled defense for a given level (assumed >= 1) using a linear formula.
+    /// Result is guaranteed to be at least 0.
+    /// </summary>
+    /// <param name="level">The level to calculate for (must be >= 1).</param>
+    /// <returns>Calculated Defense (integer, rounded to nearest, minimum 0).</returns>
+    private int CalculateDefenseInternal(int level)
+    {
+        // Linear Formula: round(baseDefense + defenseGrowthPerLevel * (level - 1))
+        float calculatedDefense = _baseDefense + _defenseGrowthPerLevel * (level - 1);
+        // Ensure Defense is at least 0 and return the rounded integer part
+        return Mathf.Max(0, Mathf.RoundToInt(calculatedDefense));
     }
 }

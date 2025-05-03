@@ -83,12 +83,20 @@ public class BattleInputRefactored : MonoBehaviour
         }
     }
 
-    // TODO: Add OnDefendButton() when defend action is implemented
-    // public void OnDefendButton()
-    // {
-    //     if (_battleSystem != null && _battleActions != null && _battleSystem.State == BattleState.PLAYERTURN)
-    //     {
-    //         // StartCoroutine(_battleActions.PlayerDefendRoutine());
-    //     }
-    // }
+    /// <summary>
+    /// Called when the Defend button is clicked.
+    /// Validates it's the player's turn before starting the PlayerDefendRoutine.
+    /// </summary>
+    public void OnDefendButton()
+    {
+        if (_battleSystem != null && _battleActions != null && _battleSystem.State == BattleState.PLAYERTURN)
+        {
+            StartCoroutine(_battleActions.PlayerDefendRoutine());
+        }
+        else if (_battleSystem != null && _battleSystem.State != BattleState.PLAYERTURN)
+        {
+            // Optional: Log or give feedback if clicked during wrong turn
+            // Debug.Log("[BattleInput] Defend button clicked, but not player's turn.");
+        }
+    }
 }

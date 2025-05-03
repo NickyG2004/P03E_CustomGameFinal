@@ -428,6 +428,9 @@ MonoBehaviour:
   _menuMusicClip: {fileID: 8300000, guid: 5e8ed54981e3dd64b913ccfb15729e8d, type: 3}
   _menuMusicFadeTime: 1.5
   _debugMode: 0
+  _highScoreLabelName: HighScore
+  _resetHighScoreButtonName: ResetButton
+  _resetFadeDuration: 1
 --- !u!82 &373553320
 AudioSource:
   m_ObjectHideFlags: 0
@@ -646,52 +649,6 @@ MonoBehaviour:
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 1
---- !u!1 &819735239
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 819735241}
-  - component: {fileID: 819735242}
-  m_Layer: 0
-  m_Name: AudioManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &819735241
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 819735239}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.032018222, y: 1.1984829, z: 0.021205448}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &819735242
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 819735239}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 81b01a880f5c48b429eacd9c6d4cdd62, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _introSong: {fileID: 8300000, guid: 5e8ed54981e3dd64b913ccfb15729e8d, type: 3}
-  _introFadeDuration: 1.5
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -852,5 +809,4 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 373553318}
-  - {fileID: 819735241}
   - {fileID: 234268687}

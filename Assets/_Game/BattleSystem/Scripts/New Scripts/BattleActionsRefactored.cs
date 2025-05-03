@@ -56,6 +56,38 @@ public class BattleActionsRefactored : MonoBehaviour
         _battleSystem.SetActionButtonsInteractable(false);
         yield return ShowMessageRoutine("You attack!", _battleSystem.FeedbackDelay);
 
+        // --- Accuracy Check ---
+        UnitRefactored attacker = _battleSystem.PlayerUnit;
+        UnitRefactored defender = _battleSystem.EnemyUnit;
+
+        // Calculate modifier based on speed difference
+        int speedDifference = attacker.Speed - defender.Speed;
+        float speedModifier = speedDifference * _battleSystem.AccuracySpeedFactor;
+
+        // Calculate final hit chance (Base + Modifier), clamped within Min/Max bounds
+        float finalHitChance = Mathf.Clamp(
+            _battleSystem.BaseHitChance + speedModifier,
+            _battleSystem.MinHitChance,
+            _battleSystem.MaxHitChance
+        );
+
+        // Optional Debug Log: Uncomment to see calculation details in Console
+        // Debug.Log($"[PlayerAttack Accuracy] AttackerSpd:{attacker.Speed}, DefenderSpd:{defender.Speed} => SpdDiff:{speedDifference} => Mod:{speedModifier:P1}. BaseHit:{_battleSystem.BaseHitChance:P1} => FinalHit:{finalHitChance:P1}");
+
+        // Perform the hit check using the final calculated chance
+        bool didHit = UnityEngine.Random.value <= finalHitChance;
+
+        if (!didHit)
+        {
+            // Show miss message and wait
+            yield return StartCoroutine(ShowMessageRoutine("Your attack missed!", _battleSystem.TurnDelay));
+            // Skip damage/crit logic and go directly to enemy's turn
+            yield return StartCoroutine(_battleSystem.EnemyTurnRoutine());
+            yield break; // End this PlayerAttackRoutine
+        }
+        // --- End Accuracy Check ---
+
+
         // Roll damage with critical hit calculation
         int damage = _battleSystem.PlayerUnit.RollDamage(
             _battleSystem.DamageMinMultiplier,
@@ -100,6 +132,37 @@ public class BattleActionsRefactored : MonoBehaviour
         // Show enemy attack message
         yield return ShowMessageRoutine($"{_battleSystem.EnemyUnit.UnitName} attacks!", _battleSystem.FeedbackDelay);
 
+        // --- Accuracy Check ---
+        UnitRefactored attacker = _battleSystem.EnemyUnit;
+        UnitRefactored defender = _battleSystem.PlayerUnit;
+
+        // Calculate modifier based on speed difference
+        int speedDifference = attacker.Speed - defender.Speed;
+        float speedModifier = speedDifference * _battleSystem.AccuracySpeedFactor;
+
+        // Calculate final hit chance (Base + Modifier), clamped within Min/Max bounds
+        // Using same base chance for enemy, could vary later if needed
+        float finalHitChance = Mathf.Clamp(
+            _battleSystem.BaseHitChance + speedModifier,
+            _battleSystem.MinHitChance,
+            _battleSystem.MaxHitChance
+        );
+
+        // Optional Debug Log: Uncomment to see calculation details in Console
+        // Debug.Log($"[EnemyAttack Accuracy] AttackerSpd:{attacker.Speed}, DefenderSpd:{defender.Speed} => SpdDiff:{speedDifference} => Mod:{speedModifier:P1}. BaseHit:{_battleSystem.BaseHitChance:P1} => FinalHit:{finalHitChance:P1}");
+
+        // Perform the hit check using the final calculated chance
+        bool didHit = UnityEngine.Random.value <= finalHitChance;
+
+        if (!didHit)
+        {
+            // Show miss message (use FeedbackDelay so it's visible before BattleSystem's TurnDelay kicks in)
+            yield return StartCoroutine(ShowMessageRoutine($"{attacker.UnitName}'s attack missed!", _battleSystem.FeedbackDelay));
+            // Skip damage/crit logic. The calling BattleSystem.EnemyTurnRoutine handles the next steps.
+            yield break; // End this EnemyAttackRoutine early
+        }
+        // --- End Accuracy Check ---
+
         // Roll damage with critical hit calculation
         int damage = _battleSystem.EnemyUnit.RollDamage(
             _battleSystem.DamageMinMultiplier,
@@ -134,7 +197,25 @@ public class BattleActionsRefactored : MonoBehaviour
 
         _battleSystem.SetActionButtonsInteractable(false);
 
-        if (_battleSystem.PlayerUnit.CurrentHP >= _battleSystem.PlayerUnit.MaxHP) { /*...*/ yield break; } // Full health check unchanged
+        // Check if already at full health
+        if (_battleSystem.PlayerUnit.CurrentHP >= _battleSystem.PlayerUnit.MaxHP)
+        {
+            // Show the warning message
+            yield return StartCoroutine(ShowMessageRoutine("Already at full health!", _battleSystem.TurnDelay));
+
+            // --- CORRECTED LOGIC ---
+            // Reset the prompt text directly
+            if (_battleSystem.DialogueText != null)
+            {
+                _battleSystem.DialogueText.text = "Choose an action:";
+            }
+            // Re-enable the action buttons so the player can choose again
+            _battleSystem.SetActionButtonsInteractable(true);
+            // --- END CORRECTION ---
+
+            // Exit the PlayerHealRoutine immediately, letting the player choose again.
+            yield break;
+        }
 
         // Calculate heal amount using the debugged Unit method
         int healValue = _battleSystem.PlayerUnit.GetRandomHealAmount(
@@ -174,6 +255,23 @@ public class BattleActionsRefactored : MonoBehaviour
 
         yield return StartCoroutine(ShowMessageRoutine($"Recovered {finalHealValue} HP!", _battleSystem.TurnDelay));
         yield return StartCoroutine(_battleSystem.EnemyTurnRoutine());
+    }
+
+    /// <summary>
+    /// Coroutine for the player's defend sequence. Disables input, sets the
+    /// player's state to defending, shows a message, and transitions to the enemy's turn.
+    /// </summary>
+    public IEnumerator PlayerDefendRoutine()
+    {
+        if (!ValidateBattleSystemReference()) yield break;
+
+        // Disable input and set defending state
+        _battleSystem.SetActionButtonsInteractable(false);
+        _battleSystem.PlayerUnit.StartDefending();
+
+        // Show message and transition turn
+        yield return StartCoroutine(ShowMessageRoutine("You brace yourself!", _battleSystem.TurnDelay));
+        yield return StartCoroutine(_battleSystem.EnemyTurnRoutine()); // Start enemy's turn
     }
 
     // -------------------------------------------------------------------------

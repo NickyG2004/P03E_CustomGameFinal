@@ -11,9 +11,9 @@
     align-self: center;
     width: 700px;
     height: 180px;
-    margin-top: 205px;
+    margin-top: 91px;
     margin-right: 50px;
-    margin-bottom: 50px;
+    margin-bottom: 125px;
     margin-left: 50px;
     color: rgb(255, 255, 255);
     background-color: rgb(115, 115, 115);
