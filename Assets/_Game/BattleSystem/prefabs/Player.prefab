@@ -49,10 +49,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _baseHP: 20
   _hpGrowthFactor: 2.5
-  _baseDamage: 73
+  _baseDamage: 5
   _damageGrowthFactor: 1.5
   _baseSpeed: 10
   _speedGrowthPerLevel: 0.5
+  _baseDefense: 2
+  _defenseGrowthPerLevel: 0.25
 --- !u!114 &311606560417318321
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -80,6 +82,7 @@ MonoBehaviour:
   _unitName: Player
   _statsCalculator: {fileID: 8822217809216479347}
   _healthComponent: {fileID: 311606560417318321}
+  _defenseConstant: 100
 --- !u!1 &4347409319922439739
 GameObject:
   m_ObjectHideFlags: 0
@@ -107,7 +110,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -1.16, y: 0.25, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 3, y: 3, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 5300145108275345966}
@@ -156,7 +159,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 75f5f34dc1b5347e0b8351032682f224, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 9f0ef16161bee1549bd01227eb172e1f, type: 3}
   m_Color: {r: 0, g: 0.9371486, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
