@@ -319,6 +319,7 @@ MonoBehaviour:
   _battleStartDelay: 2
   _turnDelay: 2
   _feedbackDelay: 1
+  _unitFadeOutDuration: 1
   _endMenuFadeDuration: 1
 --- !u!4 &79349229
 Transform:
