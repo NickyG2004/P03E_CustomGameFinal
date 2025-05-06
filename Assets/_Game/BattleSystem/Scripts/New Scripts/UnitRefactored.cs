@@ -33,6 +33,10 @@ public class UnitRefactored : MonoBehaviour
     [SerializeField, Tooltip("Constant used in damage reduction formula when defending: Multiplier = DefConstant / (DefConstant + Defense). Higher values mean Defense matters less initially.")]
     [Min(1f)] private float _defenseConstant = 100f; // Default: 100 is common
 
+    [Header("Component References")]
+    [SerializeField, Tooltip("Reference to the component controlling animations.")]
+    private UnitAnimatorController _animatorController;
+
     #endregion
 
     #region Private State
@@ -61,6 +65,10 @@ public class UnitRefactored : MonoBehaviour
         {
             Debug.LogError($"[Unit] HealthComponent component reference is not assigned on {gameObject.name}! Unit requires this component.", this);
         }
+
+        // Find the Animator Controller on the same GameObject
+        if (_animatorController == null) _animatorController = GetComponent<UnitAnimatorController>();
+        if (_animatorController == null) Debug.LogWarning($"[Unit] UnitAnimatorController not found on {gameObject.name}. Animations won't work.", this);
         // Note: Initialization (setting level, calculating stats) is typically triggered
         // externally by the system managing unit spawning (e.g., BattleSystemRefactored).
     }
@@ -271,11 +279,17 @@ public class UnitRefactored : MonoBehaviour
         return result;
     }
 
+    /// <summary> Tells the animator controller whether it's this unit's turn. </summary>
+    public void SetAnimatorIsPlayerTurn(bool isTurn)
+    {
+        _animatorController?.SetIsPlayerTurn(isTurn); // Call the method on the controller script
+    }
+
     #endregion
 
-    #region Public Properties
+        #region Public Properties
 
-    /// <summary> Gets the display name of the unit (set in Inspector). </summary>
+        /// <summary> Gets the display name of the unit (set in Inspector). </summary>
     public string UnitName => _unitName;
 
     /// <summary> Gets the current level of the unit. </summary>

@@ -292,6 +292,8 @@ public class BattleSystemRefactored : MonoBehaviour
         // --- Add Defend Status Clear ---
         if (PlayerUnit != null) PlayerUnit.EndDefending(); // Stop defending at start of turn
 
+        PlayerUnit?.SetAnimatorIsPlayerTurn(true); // Tell animator it's player's turn
+
         yield return ShowDialogRoutine("Choose an action:"); // Update dialogue
         SetActionButtonsInteractable(true); // Enable player input
         // Execution now waits for a button press handled by BattleInputRefactored

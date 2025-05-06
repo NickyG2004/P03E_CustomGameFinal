@@ -114,6 +114,7 @@ public class BattleActionsRefactored : MonoBehaviour
             yield break; // Stop this coroutine as battle has ended
         }
 
+        _battleSystem.PlayerUnit?.SetAnimatorIsPlayerTurn(false); // Tell animator player's turn is ending
 
         // If enemy survived, show damage dealt and hand off to enemy turn
         yield return ShowMessageRoutine($"You deal {damage} damage!", _battleSystem.TurnDelay);
@@ -253,6 +254,8 @@ public class BattleActionsRefactored : MonoBehaviour
         _battleSystem.PlayerUnit.Heal(finalHealValue);
         _battleSystem.PlayerHUD.SetHP(_battleSystem.PlayerUnit.CurrentHP);
 
+        _battleSystem.PlayerUnit?.SetAnimatorIsPlayerTurn(false); // Tell animator player's turn is ending
+
         yield return StartCoroutine(ShowMessageRoutine($"Recovered {finalHealValue} HP!", _battleSystem.TurnDelay));
         yield return StartCoroutine(_battleSystem.EnemyTurnRoutine());
     }
@@ -268,6 +271,8 @@ public class BattleActionsRefactored : MonoBehaviour
         // Disable input and set defending state
         _battleSystem.SetActionButtonsInteractable(false);
         _battleSystem.PlayerUnit.StartDefending();
+
+        _battleSystem.PlayerUnit?.SetAnimatorIsPlayerTurn(false); // Tell animator player's turn is ending
 
         // Show message and transition turn
         yield return StartCoroutine(ShowMessageRoutine("You brace yourself!", _battleSystem.TurnDelay));
