@@ -202,11 +202,22 @@ public class UnitRefactored : MonoBehaviour
     /// <summary> Resets the unit's Defending state to false. </summary>
     public void EndDefending()
     {
-        if (IsDefending) // Only log/update visuals if it was actually true
+        Debug.Log($"[{gameObject.name}] UnitRefactored.EndDefending() CALLED. Was IsDefending: {IsDefending}");
+        bool wasDefending = IsDefending;
+        IsDefending = false;
+
+        if (wasDefending && _animatorController != null)
         {
-            IsDefending = false;
-            // Optional: Add visual feedback later (e.g., disable shield icon)
-            // Debug.Log($"[{UnitName}] Ended Defending.");
+            Debug.Log($"[{gameObject.name}] UnitRefactored.EndDefending: Calling _animatorController.EndDefendVisuals(). _animatorController is NOT null.");
+            _animatorController.EndDefendVisuals();
+        }
+        else if (wasDefending && _animatorController == null)
+        {
+            Debug.LogError($"[{gameObject.name}] UnitRefactored.EndDefending: _animatorController IS NULL! Cannot revert visuals.", this);
+        }
+        else if (!wasDefending)
+        {
+            Debug.Log($"[{gameObject.name}] UnitRefactored.EndDefending: Called, but unit was not in IsDefending state.");
         }
     }
 
@@ -280,10 +291,10 @@ public class UnitRefactored : MonoBehaviour
     }
 
     /// <summary> Tells the animator controller whether it's this unit's turn. </summary>
-    public void SetAnimatorIsPlayerTurn(bool isTurn)
-    {
-        _animatorController?.SetIsPlayerTurn(isTurn); // Call the method on the controller script
-    }
+    //public void SetAnimatorIsPlayerTurn(bool isTurn)
+    //{
+        //_animatorController?.SetIsPlayerTurn(isTurn); // Call the method on the controller script
+    //}
 
     #endregion
 

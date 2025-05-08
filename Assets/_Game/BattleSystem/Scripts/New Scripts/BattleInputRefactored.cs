@@ -19,10 +19,21 @@ using UnityEngine;
 public class BattleInputRefactored : MonoBehaviour
 {
     // -------------------------------------------------------------------------
+    //  Serialize Fields (Cached References)
+    // -------------------------------------------------------------------------
+
+    [Header("Sound Effects")]
+    [SerializeField, Tooltip("Menu Button Sound.")]
+    private AudioClip _MenuButtonSound = null;
+    [SerializeField, Tooltip("Menu Button Sound Volume")]
+    private float _MenuButtonSoundVolume = 1f;
+
+    // -------------------------------------------------------------------------
     // Private Fields (Cached References)
     // -------------------------------------------------------------------------
     private BattleSystemRefactored _battleSystem;
     private BattleActionsRefactored _battleActions;
+    private AudioSource _audioSource;
 
     // -------------------------------------------------------------------------
     // Unity Callbacks
@@ -39,6 +50,9 @@ public class BattleInputRefactored : MonoBehaviour
         // Validate references
         if (_battleSystem == null) Debug.LogError("[BattleInput] BattleSystemRefactored component not found!", this);
         if (_battleActions == null) Debug.LogError("[BattleInput] BattleActionsRefactored component not found!", this);
+
+        // Cache AudioSource for sound effects
+        _audioSource = GetComponent<AudioSource>();
     }
 
     // -------------------------------------------------------------------------
@@ -55,6 +69,11 @@ public class BattleInputRefactored : MonoBehaviour
         // and the game state is PLAYERTURN.
         if (_battleSystem != null && _battleActions != null && _battleSystem.State == BattleState.PLAYERTURN)
         {
+            // Play button sound effect
+            if (_audioSource != null && _MenuButtonSound != null)
+            {
+                _audioSource.PlayOneShot(_MenuButtonSound, _MenuButtonSoundVolume);
+            }
             StartCoroutine(_battleActions.PlayerAttackRoutine());
         }
         else if (_battleSystem != null && _battleSystem.State != BattleState.PLAYERTURN)
@@ -74,6 +93,12 @@ public class BattleInputRefactored : MonoBehaviour
         // and the game state is PLAYERTURN.
         if (_battleSystem != null && _battleActions != null && _battleSystem.State == BattleState.PLAYERTURN)
         {
+            // Play button sound effect
+            if (_audioSource != null && _MenuButtonSound != null)
+            {
+                _audioSource.PlayOneShot(_MenuButtonSound, _MenuButtonSoundVolume);
+            }
+
             StartCoroutine(_battleActions.PlayerHealRoutine());
         }
         else if (_battleSystem != null && _battleSystem.State != BattleState.PLAYERTURN)
@@ -91,6 +116,12 @@ public class BattleInputRefactored : MonoBehaviour
     {
         if (_battleSystem != null && _battleActions != null && _battleSystem.State == BattleState.PLAYERTURN)
         {
+            // Play button sound effect
+            if (_audioSource != null && _MenuButtonSound != null)
+            {
+                _audioSource.PlayOneShot(_MenuButtonSound, _MenuButtonSoundVolume);
+            }
+
             StartCoroutine(_battleActions.PlayerDefendRoutine());
         }
         else if (_battleSystem != null && _battleSystem.State != BattleState.PLAYERTURN)

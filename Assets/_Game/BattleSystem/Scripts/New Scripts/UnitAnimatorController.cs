@@ -1,109 +1,173 @@
 // -----------------------------------------------------------------------------
 // Filename: UnitAnimatorController.cs
-// Date: 2025-05-04
+// (Modified for always looping idle - IsPlayerTurn logic removed)
+// (Further modification for robust Defend tint reset)
 // -----------------------------------------------------------------------------
-// Handles controlling animations for a battle unit based on game state
-// communicated from other scripts (like BattleSystem or BattleActions).
-// Requires an Animator component on the same GameObject.
+// Handles controlling DOTween sequences for a battle unit.
+// Can also interact with a Unity Animator for base states like Idle if needed.
 // -----------------------------------------------------------------------------
 
 using UnityEngine;
+using DG.Tweening; // Ensure DOTween is imported
 
-/// <summary>
-/// Manages triggering animations on a unit's Animator component.
-/// Provides public methods to be called by other systems.
-/// </summary>
-[RequireComponent(typeof(Animator))]
+[RequireComponent(typeof(Animator))] // Keep if your Idle is a Unity Animation state
 public class UnitAnimatorController : MonoBehaviour
 {
     #region Private Fields
+    private Animator _animator; // Used if Animator component handles looping idle
 
-    private Animator _animator;
+    [Header("Tween Targets (Assign in Inspector)")]
+    [SerializeField, Tooltip("The child GameObject that holds the main sprite and will be tweened.")]
+    private Transform _artTransform;
+    [SerializeField, Tooltip("The SpriteRenderer on the Art object, for color/fade tweens.")]
+    private SpriteRenderer _artSpriteRenderer;
 
-    // Animator Parameter Hashes (more efficient than strings)
-    private readonly int _hashIsPlayerTurn = Animator.StringToHash("IsPlayerTurn");
+    // Animator Parameter Hashes (if using Animator for more than just idle)
     private readonly int _hashAttackTrigger = Animator.StringToHash("Attack");
     private readonly int _hashHealTrigger = Animator.StringToHash("Heal");
     private readonly int _hashDefendTrigger = Animator.StringToHash("Defend");
     private readonly int _hashHurtTrigger = Animator.StringToHash("Hurt");
     private readonly int _hashDefeatedTrigger = Animator.StringToHash("Defeated");
-    // Add hashes for any other parameters you create (e.g., IsDefending bool)
 
+    // Color State Management for Defend Tint
+    private Color _trueOriginalSpriteColor; // Captured in Awake
+    private bool _isDefendTintActive = false;
     #endregion
 
-    #region Unity Callbacks
-
-    /// <summary>
-    /// Caches the Animator component reference.
-    /// </summary>
     private void Awake()
     {
         _animator = GetComponent<Animator>();
-        if (_animator == null)
+        // if (_animator == null) Debug.LogError(...); // Your existing null check
+
+        if (_artTransform == null)
         {
-            Debug.LogError($"[UnitAnimatorController] Animator component not found on {gameObject.name}!", this);
-            this.enabled = false; // Disable if Animator is missing
+            Transform artChild = transform.Find("Art");
+            if (artChild != null) _artTransform = artChild;
+            else Debug.LogError($"[UnitAnimatorController] Art Transform not assigned and not found as child 'Art' on {gameObject.name}!", this);
+        }
+
+        if (_artSpriteRenderer == null && _artTransform != null)
+        {
+            _artSpriteRenderer = _artTransform.GetComponentInChildren<SpriteRenderer>();
+            if (_artSpriteRenderer == null) Debug.LogWarning($"[UnitAnimatorController] Art Sprite Renderer not found on {gameObject.name}. Color/fade tweens might not work.", this);
+        }
+
+        if (_artSpriteRenderer != null)
+        {
+            // Capture the color as it is when the game starts/object awakens
+            _trueOriginalSpriteColor = _artSpriteRenderer.color;
+            Debug.Log($"[{gameObject.name}] Awake: Stored _trueOriginalSpriteColor = {_trueOriginalSpriteColor}", this);
+        }
+        else
+        {
+            // If no sprite renderer, set a default to avoid errors, though color changes won't work
+            _trueOriginalSpriteColor = Color.white;
+            Debug.LogWarning($"[{gameObject.name}] Awake: _artSpriteRenderer is null. _trueOriginalSpriteColor defaulted to white.", this);
         }
     }
 
-    #endregion
-
-    #region Public Animation Triggers / State Setters
-
-    /// <summary>
-    /// Sets the 'IsPlayerTurn' boolean parameter on the Animator.
-    /// Used to switch between looping idle and static idle (first frame).
-    /// </summary>
-    /// <param name="isTurn">True if it's this unit's turn, false otherwise.</param>
-    public void SetIsPlayerTurn(bool isTurn)
+    public void TriggerAttack(bool isPlayerUnit = true)
     {
-        if (_animator == null) return;
-        _animator.SetBool(_hashIsPlayerTurn, isTurn);
-        // Debug.Log($"[{gameObject.name}] Animator.SetBool(IsPlayerTurn, {isTurn})", this);
+        if (_artTransform == null) return;
+        _artTransform.DOKill(); // Kill previous transform tweens
+        Vector3 originalPosition = _artTransform.localPosition;
+        float lungeDirection = isPlayerUnit ? 1f : -1f;
+        Sequence attackSequence = DOTween.Sequence();
+        attackSequence.Append(_artTransform.DOLocalMoveX(originalPosition.x + (0.5f * lungeDirection), 0.15f).SetEase(Ease.OutQuad))
+                      .Append(_artTransform.DOLocalMoveX(originalPosition.x, 0.25f).SetEase(Ease.InQuad));
     }
 
-    /// <summary> Triggers the Attack animation. </summary>
-    public void TriggerAttack()
-    {
-        if (_animator == null) return;
-        _animator.SetTrigger(_hashAttackTrigger);
-        // Debug.Log($"[{gameObject.name}] Animator.SetTrigger(Attack)", this);
-    }
-
-    /// <summary> Triggers the Heal animation. </summary>
     public void TriggerHeal()
     {
-        if (_animator == null) return;
-        _animator.SetTrigger(_hashHealTrigger);
-        // Debug.Log($"[{gameObject.name}] Animator.SetTrigger(Heal)", this);
+        if (_artTransform == null || _artSpriteRenderer == null) return;
+        _artTransform.DOKill();
+        _artSpriteRenderer.DOKill(); // Kill previous color tweens specifically
+
+        // Determine what color to return to after the green flash
+        Color colorToReturnToAfterHealFlash = _isDefendTintActive ? _artSpriteRenderer.color : _trueOriginalSpriteColor;
+        // Note: if _isDefendTintActive is true, _artSpriteRenderer.color *should* be the defend tint.
+
+        Sequence healSequence = DOTween.Sequence();
+        healSequence.Append(_artTransform.DOPunchScale(new Vector3(0.2f, 0.2f, 0), 0.4f, 5, 0.5f))
+                  .Join(_artSpriteRenderer.DOColor(Color.green, 0.2f)) // Flash green
+                  .Append(_artSpriteRenderer.DOColor(colorToReturnToAfterHealFlash, 0.2f)); // Return to appropriate color
     }
 
-    /// <summary> Triggers the Defend animation/stance change. </summary>
     public void TriggerDefend()
     {
-        if (_animator == null) return;
-        _animator.SetTrigger(_hashDefendTrigger);
-        // Debug.Log($"[{gameObject.name}] Animator.SetTrigger(Defend)", this);
-        // If Defend is a persistent state (not just trigger), use SetBool("IsDefending", true/false)
+        if (_artTransform == null) return; // SpriteRenderer check below
+
+        _artTransform.DOKill(true); // Kill all tweens on artTransform, complete them if possible
+
+        _artTransform.DOPunchScale(new Vector3(0f, -0.1f, 0), 0.3f, 3, 0.5f);
+
+        if (_artSpriteRenderer != null)
+        {
+            _artSpriteRenderer.DOKill(true); // Kill previous color tweens, complete them
+            Color defendColor = new Color(0.7f, 0.75f, 0.8f, _trueOriginalSpriteColor.a); // Use original alpha
+            _artSpriteRenderer.color = defendColor; // Set color directly first
+            _artSpriteRenderer.DOColor(defendColor, 0.15f).SetEase(Ease.OutQuad); // Optional: slight tween for visual flair if needed
+            _isDefendTintActive = true;
+            Debug.Log($"[{gameObject.name}] TriggerDefend: Applied defendColor ({defendColor}). _isDefendTintActive = true. TrueOriginal was {_trueOriginalSpriteColor}", this);
+        }
     }
 
-    /// <summary> Triggers the Hurt animation. </summary>
     public void TriggerHurt()
     {
-        if (_animator == null) return;
-        _animator.SetTrigger(_hashHurtTrigger);
-        // Debug.Log($"[{gameObject.name}] Animator.SetTrigger(Hurt)", this);
+        if (_artTransform == null || _artSpriteRenderer == null) return;
+        _artTransform.DOKill(true); // Complete and kill transform tweens
+        _artSpriteRenderer.DOKill(true); // Complete and kill color tweens
+
+        Color colorBeforeHurt = _artSpriteRenderer.color;
+        Debug.Log($"[{gameObject.name}] TriggerHurt: colorBeforeHurt = {colorBeforeHurt}", this);
+
+        Sequence hurtSequence = DOTween.Sequence();
+        hurtSequence.Append(_artTransform.DOShakePosition(0.3f, strength: new Vector3(0.2f, 0.1f, 0), vibrato: 10, randomness: 90, fadeOut: true))
+                  .Join(_artSpriteRenderer.DOColor(Color.red, 0.1f)) // Flash red
+                  .Append(_artSpriteRenderer.DOColor(colorBeforeHurt, 0.2f).SetDelay(0.1f)); // Return to color it was before getting hurt
     }
 
-    /// <summary> Triggers the Defeated animation. </summary>
-    public void TriggerDefeated()
+    public void TriggerDefeated(float duration = 1.0f)
     {
-        if (_animator == null) return;
-        _animator.SetTrigger(_hashDefeatedTrigger);
-        // Debug.Log($"[{gameObject.name}] Animator.SetTrigger(Defeated)", this);
+        if (_artSpriteRenderer != null)
+        {
+            _artSpriteRenderer.DOKill(true);
+            _artSpriteRenderer.DOFade(0f, duration).SetEase(Ease.InQuad);
+        }
+        if (_artTransform != null)
+        {
+            _artTransform.DOKill(true);
+            _artTransform.DOScale(Vector3.zero, duration * 1.2f).SetEase(Ease.InBack);
+        }
     }
 
-    // Add methods for other triggers/parameters as needed (e.g., SetBool("IsDefending", bool))
-
-    #endregion
+    /// <summary>
+    /// Resets visual effects applied by TriggerDefend, like color tint,
+    /// back to the true original sprite color.
+    /// </summary>
+    public void EndDefendVisuals()
+    {
+        if (_artSpriteRenderer != null)
+        {
+            if (_isDefendTintActive)
+            {
+                Debug.Log($"[UnitAnimatorController] EndDefendVisuals: Attempting to revert from DEFEND TINT. Current color before DOKill: {_artSpriteRenderer.color}, Target (trueOriginal): {_trueOriginalSpriteColor}");
+                _artSpriteRenderer.DOKill(true); // Complete any ongoing tweens immediately AND kill them.
+                _artSpriteRenderer.color = _trueOriginalSpriteColor; // Set color DIRECTLY.
+                _isDefendTintActive = false;
+                Debug.Log($"[UnitAnimatorController] EndDefendVisuals: Color FORCED to _trueOriginalSpriteColor. New current color: {_artSpriteRenderer.color}. _isDefendTintActive = {_isDefendTintActive}");
+            }
+            else
+            {
+                // If defend tint wasn't active, but we want to ensure it's the original color anyway (e.g. after complex interactions)
+                // This might be too aggressive if other tints are meant to persist across turns.
+                // For now, only revert if _isDefendTintActive was true.
+                Debug.LogWarning($"[UnitAnimatorController] EndDefendVisuals: Called but _isDefendTintActive was false. Current color: {_artSpriteRenderer.color}. True original: {_trueOriginalSpriteColor}");
+            }
+        }
+        else
+        {
+            Debug.LogError("[UnitAnimatorController] EndDefendVisuals: _artSpriteRenderer is null!");
+        }
+    }
 }

@@ -109,6 +109,8 @@ public class BattleSystemRefactored : MonoBehaviour
     [Range(0f, 5f)] private float _turnDelay = 2f;
     [SerializeField, Tooltip("Short delay (seconds) used for UI feedback like button presses or brief messages.")]
     [Range(0f, 5f)] private float _feedbackDelay = 1.0f; // Renamed from _buttonDelay
+    [SerializeField, Min(0.1f), Tooltip("How long the 'Player's Turn' or 'Enemy's Turn' message should display.")]
+    private float _playerTurnMessageLingerTime = 1.5f; // Default
 
     // Add within Inspector Fields region, e.g., near Timing or Transitions
     [Header("Visuals")]
@@ -118,6 +120,16 @@ public class BattleSystemRefactored : MonoBehaviour
     [Header("Transitions")]
     [SerializeField, Tooltip("Duration (seconds) for fade transitions when showing win/lose menus.")]
     [Range(0.1f, 5f)] private float _endMenuFadeDuration = 1f; // Renamed from _endFadeDuration
+
+    [Header("Sound Effects")]
+    [SerializeField, Tooltip("If player Wins sound.")]
+    private AudioClip _playerWinSound = null;
+    [SerializeField, Tooltip("player win sound volume.")]
+    private float _playerWinSoundVolume = 1f;
+    [SerializeField, Tooltip("If player Wins sound.")]
+    private AudioClip _playerLoseSound = null;
+    [SerializeField, Tooltip("player win sound volume.")]
+    private float _playerLoseSoundVolume = 1f;
 
     // -------------------------------------------------------------------------
     // Public Properties (Read-only Access)
@@ -162,6 +174,7 @@ public class BattleSystemRefactored : MonoBehaviour
     private int _currentEnemyLevel; // Use current level
     private GameObject _playerUnitInstance;
     private GameObject _enemyUnitInstance;
+    private AudioSource _audioSource;
 
     // Coroutine reference for the main battle flow
     private Coroutine _battleFlowCoroutine;
@@ -189,6 +202,9 @@ public class BattleSystemRefactored : MonoBehaviour
         // Load initial levels from SaveManager
         _currentPlayerLevel = SaveManager.PlayerLevel;
         _currentEnemyLevel = SaveManager.EnemyLevel; // May be overridden by calculation later
+
+        // Initialize the AudioSource for sound effects
+        _audioSource = gameObject.AddComponent<AudioSource>();
     }
 
     private void Start()
@@ -290,9 +306,13 @@ public class BattleSystemRefactored : MonoBehaviour
         State = BattleState.PLAYERTURN;
 
         // --- Add Defend Status Clear ---
-        if (PlayerUnit != null) PlayerUnit.EndDefending(); // Stop defending at start of turn
+        Debug.Log($"[BattleSystem] PlayerTurnRoutine START for {PlayerUnit?.name}. Attempting to call EndDefending.");
+        if (PlayerUnit != null)
+        {
+            PlayerUnit.EndDefending(); // This should call the method in UnitRefactored
+        }
 
-        PlayerUnit?.SetAnimatorIsPlayerTurn(true); // Tell animator it's player's turn
+        // PlayerUnit?.SetAnimatorIsPlayerTurn(true); // Tell animator it's player's turn
 
         yield return ShowDialogRoutine("Choose an action:"); // Update dialogue
         SetActionButtonsInteractable(true); // Enable player input
@@ -334,7 +354,7 @@ public class BattleSystemRefactored : MonoBehaviour
         // If player survived, transition back to player's turn
         // yield return new WaitForSeconds(_turnDelay); // Delay before message? (Already delayed in EnemyAttackRoutine)
         yield return ShowDialogRoutine("Your turn!");
-        // yield return new WaitForSeconds(_turnDelay); // Delay before enabling buttons?
+        yield return new WaitForSeconds(_playerTurnMessageLingerTime); // Delay before enabling buttons?
         yield return StartCoroutine(PlayerTurnRoutine()); // Start next player turn
     }
 
@@ -348,23 +368,36 @@ public class BattleSystemRefactored : MonoBehaviour
         SetActionButtonsInteractable(false); // Ensure buttons are off
         ShowResultDialog(playerWon);         // Display Win/Lose message
 
-        // --- START FADE OUT DEFEATED UNIT ---
-        GameObject defeatedUnitInstance = playerWon ? _enemyUnitInstance : _playerUnitInstance;
-        if (defeatedUnitInstance != null)
+        //// --- START FADE OUT DEFEATED UNIT ---
+        //GameObject defeatedUnitInstance = playerWon ? _enemyUnitInstance : _playerUnitInstance;
+        //if (defeatedUnitInstance != null)
+        //{
+        //    SpriteRenderer defeatedSprite = defeatedUnitInstance.GetComponentInChildren<SpriteRenderer>(); // Find the sprite
+        //    if (defeatedSprite != null)
+        //    {
+        //        StartCoroutine(FadeOutSpriteRoutine(defeatedSprite, _unitFadeOutDuration));
+        //        // We start the coroutine but DON'T yield return on it,
+        //        // allowing the fade to happen concurrently with the delay below.
+        //    }
+        //    else
+        //    {
+        //        Debug.LogWarning($"[BattleSystem] Could not find SpriteRenderer on defeated unit '{defeatedUnitInstance.name}' to fade out.", defeatedUnitInstance);
+        //    }
+        //}
+        //// --- END FADE OUT ---
+        ///
+
+        // --- START DEFEATED UNIT TWEEN ---
+        UnitRefactored defeatedUnit = playerWon ? EnemyUnit : PlayerUnit;
+        if (defeatedUnit != null)
         {
-            SpriteRenderer defeatedSprite = defeatedUnitInstance.GetComponentInChildren<SpriteRenderer>(); // Find the sprite
-            if (defeatedSprite != null)
-            {
-                StartCoroutine(FadeOutSpriteRoutine(defeatedSprite, _unitFadeOutDuration));
-                // We start the coroutine but DON'T yield return on it,
-                // allowing the fade to happen concurrently with the delay below.
-            }
-            else
-            {
-                Debug.LogWarning($"[BattleSystem] Could not find SpriteRenderer on defeated unit '{defeatedUnitInstance.name}' to fade out.", defeatedUnitInstance);
-            }
+            UnitAnimatorController defeatedAnimController = defeatedUnit.GetComponent<UnitAnimatorController>();
+            defeatedAnimController?.TriggerDefeated(_unitFadeOutDuration); 
         }
-        // --- END FADE OUT ---
+        // --- END DEFEATED UNIT TWEEN ---
+
+        //play win or lose sound
+        _audioSource.PlayOneShot(playerWon ? _playerWinSound : _playerLoseSound, playerWon ? _playerWinSoundVolume : _playerLoseSoundVolume);
 
         yield return new WaitForSeconds(_turnDelay); // Pause on Win/Lose message (while unit fades)
 

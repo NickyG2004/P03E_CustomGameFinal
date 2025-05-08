@@ -1,9 +1,12 @@
 .header {
     font-size: 40px;
     color: rgb(255, 255, 255);
+    -unity-font-definition: url("project://database/Assets/_Game/BattleSystem/Sprites/UI/Orange%20kid.ttf?fileID=12800000&guid=8f96efdd374223c4bb571211294c6e88&type=3#Orange kid");
 }
 
 .header2 {
+    -unity-font-definition: url("project://database/Assets/_Game/BattleSystem/Sprites/UI/Orange%20kid.ttf?fileID=12800000&guid=8f96efdd374223c4bb571211294c6e88&type=3#Orange kid");
+    color: rgb(0, 0, 0);
 }
 
 .button {
@@ -16,8 +19,8 @@
     margin-bottom: 125px;
     margin-left: 50px;
     color: rgb(255, 255, 255);
-    background-color: rgb(115, 115, 115);
-    -unity-background-image-tint-color: rgb(89, 89, 89);
+    background-color: rgba(115, 115, 115, 0);
+    -unity-background-image-tint-color: rgb(255, 255, 255);
     border-left-color: rgba(255, 255, 255, 0);
     border-right-color: rgba(255, 255, 255, 0);
     border-top-color: rgba(255, 255, 255, 0);
@@ -33,16 +36,20 @@
     border-bottom-width: 0;
     border-left-width: 0;
     transition-duration: 0.35s;
+    background-image: url("project://database/Assets/_Game/BattleSystem/Sprites/UI/Sprite-0005.png?fileID=21300000&guid=4e818a39d8377b1408ee61cebb8ac0e3&type=3#Sprite-0005");
 }
 
 .button:hover {
     scale: 1.1 1.1;
-    -unity-background-image-tint-color: rgb(238, 106, 248);
-    background-color: rgb(128, 207, 172);
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+    background-color: rgba(128, 207, 172, 0);
+    background-image: url("project://database/Assets/_Game/BattleSystem/Sprites/UI/Sprite-0006.png?fileID=21300000&guid=93228fd10bc52854b96f67f1297954b5&type=3#Sprite-0006");
+    transition-duration: 0.35s;
 }
 
 .button:active {
-    background-color: rgb(0, 255, 9);
+    background-color: rgba(0, 255, 9, 0);
+    background-image: url("project://database/Assets/_Game/BattleSystem/Sprites/UI/Sprite-0006.png?fileID=21300000&guid=93228fd10bc52854b96f67f1297954b5&type=3#Sprite-0006");
 }
 
 .bodyText {
@@ -50,7 +57,8 @@
     margin-top: 50px;
     -unity-font-style: bold;
     font-size: 40px;
-    color: rgb(255, 255, 255);
+    color: rgb(0, 0, 0);
     -unity-text-align: middle-center;
     text-shadow: 4px 4px 0 rgb(0, 0, 0);
+    -unity-font-definition: url("project://database/Assets/_Game/BattleSystem/Sprites/UI/Orange%20kid.ttf?fileID=12800000&guid=8f96efdd374223c4bb571211294c6e88&type=3#Orange kid");
 }

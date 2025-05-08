@@ -27,7 +27,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1.15, y: 2.95, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 3, y: 3, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6620589147302658452}
@@ -76,8 +76,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 75f5f34dc1b5347e0b8351032682f224, type: 3}
-  m_Color: {r: 1, g: 0.6862556, b: 0, a: 1}
+  m_Sprite: {fileID: -809298648, guid: 32d60ad0aeaf43c43931f05748b060bd, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -99,6 +99,8 @@ GameObject:
   - component: {fileID: 9220728719675286086}
   - component: {fileID: 2378180575051249127}
   - component: {fileID: 5245312250406806078}
+  - component: {fileID: 7809273088922383956}
+  - component: {fileID: -6884261251620396384}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Untagged
@@ -140,6 +142,8 @@ MonoBehaviour:
   _damageGrowthFactor: 1.5
   _baseSpeed: 10
   _speedGrowthPerLevel: 0.5
+  _baseDefense: 2
+  _defenseGrowthPerLevel: 0.25
 --- !u!114 &2378180575051249127
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -164,9 +168,47 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92db2a0d3a8efcd4daa7b6654fa74ab9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _unitName: Enemy
+  _unitName: Red
   _statsCalculator: {fileID: 9220728719675286086}
   _healthComponent: {fileID: 2378180575051249127}
+  _defenseConstant: 100
+  _animatorController: {fileID: -6884261251620396384}
+--- !u!95 &7809273088922383956
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4626300669077577570}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 3d2ae0b4b0310fb4e92de51ef7a8970d, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &-6884261251620396384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4626300669077577570}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b68e6b9c547d43740b5f3b5b49859eaa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _artTransform: {fileID: 8373424984528783899}
+  _artSpriteRenderer: {fileID: 7396129790955155499}
 --- !u!1 &5637182914504123156
 GameObject:
   m_ObjectHideFlags: 0

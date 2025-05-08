@@ -21,6 +21,45 @@ public class BattleActionsRefactored : MonoBehaviour
     // Private Fields
     // -------------------------------------------------------------------------
     private BattleSystemRefactored _battleSystem; // Cached reference
+    private AudioSource _audioSource; // Cached reference for sound effects
+
+    [Header("VFX Prefabs")]
+    [SerializeField, Tooltip("Particle effect prefab to spawn when the player heals.")]
+    private GameObject _vfxHealBurstPlayer; // For the player's heal
+
+    [Header("Message Timing")]
+    [SerializeField, Tooltip("How long the initial 'Player attacks/heals' message should linger ideally."), Range(0.5f, 5f)]
+    private float _actionAnnouncementLingerTime = 2.0f; // Default to 2 seconds, adjust as needed
+
+    [Header("Sound Effects")]
+    [SerializeField, Tooltip("Attack Action Sound.")]
+    private AudioClip _attackActionSound = null;
+    [SerializeField, Tooltip("Attack Action Volume")]
+    private float _attackActionSoundVolume = 1f;
+    [SerializeField, Tooltip("Miss Action Sound.")]
+    private AudioClip _missActionSound = null;
+    [SerializeField, Tooltip("Miss Action Volume")]
+    private float _missActionSoundVolume = 1f;
+    [SerializeField, Tooltip("Hurt Action Sound.")]
+    private AudioClip _hurtActionSound = null;
+    [SerializeField, Tooltip("Hurt Action Volume")]
+    private float _hurtActionSoundVolume = 1f;
+    [SerializeField, Tooltip("Crit Action Sound.")]
+    private AudioClip _critctionSound = null;
+    [SerializeField, Tooltip("Crit Action Volume")]
+    private float _critActionSoundVolume = 1f;
+    [SerializeField, Tooltip("Cast Heal Action Sound.")]
+    private AudioClip _healActionSound = null;
+    [SerializeField, Tooltip("Cast Heal Action Volume")]
+    private float _healActionSoundVolume = 1f;
+    [SerializeField, Tooltip("Heal Action Sound.")]
+    private AudioClip _castHealActionSound = null;
+    [SerializeField, Tooltip("Heal Action Volume")]
+    private float _CastHealActionSoundVolume = 1f;
+    [SerializeField, Tooltip("Defend Action Sound.")]
+    private AudioClip _defendActionSound = null;
+    [SerializeField, Tooltip("Defend Action Volume")]
+    private float _defendActionSoundSound = 1f;
 
     // -------------------------------------------------------------------------
     // Unity Callbacks
@@ -37,6 +76,9 @@ public class BattleActionsRefactored : MonoBehaviour
             Debug.LogError("[BattleActions] BattleSystemRefactored component not found on this GameObject!", this);
             this.enabled = false; // Disable if core dependency is missing
         }
+
+        // Cache AudioSource for sound effects
+        _audioSource = GetComponent<AudioSource>();
     }
 
     // -------------------------------------------------------------------------
@@ -52,73 +94,108 @@ public class BattleActionsRefactored : MonoBehaviour
     {
         if (!ValidateBattleSystemReference()) yield break;
 
-        // Disable input and show initial message
-        _battleSystem.SetActionButtonsInteractable(false);
-        yield return ShowMessageRoutine("You attack!", _battleSystem.FeedbackDelay);
+        UnitAnimatorController playerAnimController = null;
+        if (_battleSystem.PlayerUnit != null)
+        {
+            playerAnimController = _battleSystem.PlayerUnit.GetComponent<UnitAnimatorController>();
+            if (playerAnimController == null) Debug.LogWarning("[PlayerAttackRoutine] PlayerUnit's UnitAnimatorController not found.", _battleSystem.PlayerUnit);
+        }
 
-        // --- Accuracy Check ---
+        UnitAnimatorController enemyAnimController = null;
+        if (_battleSystem.EnemyUnit != null)
+        {
+            enemyAnimController = _battleSystem.EnemyUnit.GetComponent<UnitAnimatorController>();
+            if (enemyAnimController == null) Debug.LogWarning("[PlayerAttackRoutine] EnemyUnit's UnitAnimatorController not found.", _battleSystem.EnemyUnit);
+        }
+
+        _battleSystem.SetActionButtonsInteractable(false);
+
+        StartCoroutine(ShowMessageRoutine($"You Attack!", _actionAnnouncementLingerTime));
+        yield return new WaitForSeconds(1f); // Your adjusted wait for "You Attack!" visibility
+
+        playerAnimController?.TriggerAttack(true);
+        float attackImpactDelay = 0.15f;
+        yield return new WaitForSeconds(attackImpactDelay);
+
         UnitRefactored attacker = _battleSystem.PlayerUnit;
         UnitRefactored defender = _battleSystem.EnemyUnit;
-
-        // Calculate modifier based on speed difference
         int speedDifference = attacker.Speed - defender.Speed;
         float speedModifier = speedDifference * _battleSystem.AccuracySpeedFactor;
-
-        // Calculate final hit chance (Base + Modifier), clamped within Min/Max bounds
         float finalHitChance = Mathf.Clamp(
             _battleSystem.BaseHitChance + speedModifier,
             _battleSystem.MinHitChance,
             _battleSystem.MaxHitChance
         );
-
-        // Optional Debug Log: Uncomment to see calculation details in Console
-        // Debug.Log($"[PlayerAttack Accuracy] AttackerSpd:{attacker.Speed}, DefenderSpd:{defender.Speed} => SpdDiff:{speedDifference} => Mod:{speedModifier:P1}. BaseHit:{_battleSystem.BaseHitChance:P1} => FinalHit:{finalHitChance:P1}");
-
-        // Perform the hit check using the final calculated chance
         bool didHit = UnityEngine.Random.value <= finalHitChance;
 
         if (!didHit)
         {
-            // Show miss message and wait
-            yield return StartCoroutine(ShowMessageRoutine("Your attack missed!", _battleSystem.TurnDelay));
-            // Skip damage/crit logic and go directly to enemy's turn
+            if (_audioSource != null && _missActionSound != null) _audioSource.PlayOneShot(_missActionSound, _missActionSoundVolume);
+            yield return StartCoroutine(ShowMessageRoutine("Your attack missed!", _actionAnnouncementLingerTime));
             yield return StartCoroutine(_battleSystem.EnemyTurnRoutine());
-            yield break; // End this PlayerAttackRoutine
+            yield break;
         }
-        // --- End Accuracy Check ---
 
-
-        // Roll damage with critical hit calculation
+        // --- Successful Hit Logic ---
         int damage = _battleSystem.PlayerUnit.RollDamage(
             _battleSystem.DamageMinMultiplier,
             _battleSystem.DamageMaxMultiplier,
             _battleSystem.CritChance,
             _battleSystem.CritMultiplier,
-            out bool wasCrit // Use 'out' parameter to get crit status
+            out bool wasCrit
         );
 
-        // Show critical hit message if it occurred
+        // --- IMMEDIATE ENEMY REACTION (VISUAL) ---
+        // Trigger enemy's hurt animation NOW, before any blocking messages.
+        enemyAnimController?.TriggerHurt();
+
+        // --- SOUNDS & MESSAGES ---
         if (wasCrit)
         {
-            yield return ShowMessageRoutine("Critical hit!", _battleSystem.FeedbackDelay);
+            // Play crit sound.
+            // Assuming _critActionSoundVolume is defined.
+            // If you have a dedicated _critActionSound AudioClip, use it.
+            // Otherwise, your current method of using _hurtActionSound clip is used.
+            // Example with a dedicated _critActionSound (you'd need to declare this field):
+            // if (_audioSource != null && _critActionSound != null)
+            // {
+            //     _audioSource.PlayOneShot(_critActionSound, _critActionSoundVolume);
+            // }
+            // else if (_audioSource != null && _hurtActionSound != null) // Fallback to your current logic
+            // {
+            //     _audioSource.PlayOneShot(_hurtActionSound, _critActionSoundVolume);
+            // }
+
+            // Using your current sound logic for crit:
+            if (_audioSource != null && _hurtActionSound != null)
+            {
+                _audioSource.PlayOneShot(_hurtActionSound, _critActionSoundVolume);
+            }
+
+
+            // Show crit message and WAIT. Enemy has already started its hurt animation.
+            yield return StartCoroutine(ShowMessageRoutine("Critical hit!", _actionAnnouncementLingerTime));
+        }
+        else // Normal hit
+        {
+            if (_audioSource != null && _hurtActionSound != null)
+            {
+                _audioSource.PlayOneShot(_hurtActionSound, _hurtActionSoundVolume);
+            }
+            // Enemy's hurt animation was already triggered above.
         }
 
         // Apply damage to enemy and update their HUD
         ApplyDamage(_battleSystem.EnemyUnit, _battleSystem.EnemyHUD, damage);
 
-        // Check if the enemy was defeated
-        if (_battleSystem.CheckEnemyDefeatAndProcess()) // Let BattleSystem handle end routine start
+        if (_battleSystem.CheckEnemyDefeatAndProcess())
         {
-            yield return ShowMessageRoutine($"Dealt {damage} damage. Enemy defeated!", _battleSystem.TurnDelay);
-            // EndBattleRoutine is started by CheckEnemyDefeatAndProcess
-            yield break; // Stop this coroutine as battle has ended
+            yield return StartCoroutine(ShowMessageRoutine($"Dealt {damage} damage. Enemy defeated!", _actionAnnouncementLingerTime));
+            yield break;
         }
 
-        _battleSystem.PlayerUnit?.SetAnimatorIsPlayerTurn(false); // Tell animator player's turn is ending
-
-        // If enemy survived, show damage dealt and hand off to enemy turn
-        yield return ShowMessageRoutine($"You deal {damage} damage!", _battleSystem.TurnDelay);
-        yield return StartCoroutine(_battleSystem.EnemyTurnRoutine()); // Start enemy's turn
+        yield return StartCoroutine(ShowMessageRoutine($"You deal {damage} damage!", _actionAnnouncementLingerTime));
+        yield return StartCoroutine(_battleSystem.EnemyTurnRoutine());
     }
 
     /// <summary>
@@ -130,8 +207,38 @@ public class BattleActionsRefactored : MonoBehaviour
     {
         if (!ValidateBattleSystemReference()) yield break;
 
+        // play attack sound
+        //_audioSource?.PlayOneShot(_attackActionSound, _attackActionSoundVolume); // Play attack sound
+
         // Show enemy attack message
         yield return ShowMessageRoutine($"{_battleSystem.EnemyUnit.UnitName} attacks!", _battleSystem.FeedbackDelay);
+
+        // Get Animator Controllers for both Enemy (attacker) and Player (defender)
+        UnitAnimatorController enemyAnimController = null;
+        if (_battleSystem.EnemyUnit != null)
+        {
+            enemyAnimController = _battleSystem.EnemyUnit.GetComponent<UnitAnimatorController>();
+        }
+        if (enemyAnimController == null && _battleSystem.EnemyUnit != null)
+        {
+            Debug.LogWarning($"[BattleActions] EnemyUnit '{_battleSystem.EnemyUnit.name}' is missing UnitAnimatorController component.", _battleSystem.EnemyUnit);
+        }
+
+        UnitAnimatorController playerAnimController = null;
+        if (_battleSystem.PlayerUnit != null)
+        {
+            playerAnimController = _battleSystem.PlayerUnit.GetComponent<UnitAnimatorController>();
+        }
+        if (playerAnimController == null && _battleSystem.PlayerUnit != null)
+        {
+            Debug.LogWarning($"[BattleActions] PlayerUnit '{_battleSystem.PlayerUnit.name}' is missing UnitAnimatorController component.", _battleSystem.PlayerUnit);
+        }
+
+       
+
+        // --- Trigger Enemy's Attack Tween ---
+        enemyAnimController?.TriggerAttack(false); // Pass false for enemy lunge direction
+
 
         // --- Accuracy Check ---
         UnitRefactored attacker = _battleSystem.EnemyUnit;
@@ -157,6 +264,8 @@ public class BattleActionsRefactored : MonoBehaviour
 
         if (!didHit)
         {
+            // Play miss sound
+            _audioSource?.PlayOneShot(_missActionSound, _missActionSoundVolume); // Play miss sound
             // Show miss message (use FeedbackDelay so it's visible before BattleSystem's TurnDelay kicks in)
             yield return StartCoroutine(ShowMessageRoutine($"{attacker.UnitName}'s attack missed!", _battleSystem.FeedbackDelay));
             // Skip damage/crit logic. The calling BattleSystem.EnemyTurnRoutine handles the next steps.
@@ -176,8 +285,15 @@ public class BattleActionsRefactored : MonoBehaviour
         // Show critical hit message if occurred
         if (wasCrit)
         {
+            //_audioSource?.PlayOneShot(_critctionSound, _critActionSoundVolume); // Play crit sound
             yield return ShowMessageRoutine("Enemy lands a critical hit!", _battleSystem.FeedbackDelay);
         }
+
+        // Play hurt sound
+        _audioSource?.PlayOneShot(_hurtActionSound, _hurtActionSoundVolume); // Play hurt sound
+
+        // --- Trigger Player's Hurt Tween ---
+        playerAnimController?.TriggerHurt();
 
         // Apply damage to player and update their HUD
         ApplyDamage(_battleSystem.PlayerUnit, _battleSystem.PlayerHUD, damage);
@@ -195,6 +311,17 @@ public class BattleActionsRefactored : MonoBehaviour
     public IEnumerator PlayerHealRoutine()
     {
         if (!ValidateBattleSystemReference()) yield break;
+
+        // Get the Player's Animator Controller
+        UnitAnimatorController playerAnimController = null;
+        if (_battleSystem.PlayerUnit != null)
+        {
+            playerAnimController = _battleSystem.PlayerUnit.GetComponent<UnitAnimatorController>();
+        }
+        if (playerAnimController == null && _battleSystem.PlayerUnit != null)
+        {
+            Debug.LogWarning($"[BattleActions] PlayerUnit '{_battleSystem.PlayerUnit.name}' is missing UnitAnimatorController component.", _battleSystem.PlayerUnit);
+        }
 
         _battleSystem.SetActionButtonsInteractable(false);
 
@@ -247,6 +374,11 @@ public class BattleActionsRefactored : MonoBehaviour
             yield break;
         }
 
+        // --- Trigger Player's Heal Tween ---
+        playerAnimController?.TriggerHeal();
+
+        // play cast heal sound
+        //_audioSource?.PlayOneShot(_castHealActionSound, _CastHealActionSoundVolume); // Play cast heal sound
         yield return StartCoroutine(ShowMessageRoutine("Healing...", _battleSystem.FeedbackDelay));
 
         // Apply final heal amount
@@ -254,7 +386,26 @@ public class BattleActionsRefactored : MonoBehaviour
         _battleSystem.PlayerUnit.Heal(finalHealValue);
         _battleSystem.PlayerHUD.SetHP(_battleSystem.PlayerUnit.CurrentHP);
 
-        _battleSystem.PlayerUnit?.SetAnimatorIsPlayerTurn(false); // Tell animator player's turn is ending
+        // play heal sound
+        //_audioSource?.PlayOneShot(_healActionSound, _healActionSoundVolume); // Play heal sound
+        _audioSource?.PlayOneShot(_castHealActionSound, _CastHealActionSoundVolume); // Play cast heal sound
+
+
+        // --- SPAWN HEAL PARTICLE EFFECT ---
+        if (_vfxHealBurstPlayer != null && _battleSystem.PlayerUnit != null)
+        {
+            Transform spawnTransform = _battleSystem.PlayerUnit.transform.Find("temp_Player_Art"); 
+            if (spawnTransform == null) spawnTransform = _battleSystem.PlayerUnit.transform;
+            Instantiate(_vfxHealBurstPlayer, spawnTransform.position, Quaternion.identity);
+            Debug.Log($"[BattleActions] Spawned Heal VFX at {_battleSystem.PlayerUnit.transform.position}");
+        }
+        else if (_vfxHealBurstPlayer == null)
+        {
+            Debug.LogWarning("[BattleActions] _vfxHealBurstPlayer prefab not assigned in Inspector. Cannot spawn heal particle effect.");
+        }
+        // --- END SPAWN HEAL PARTICLE EFFECT ---
+
+        //_battleSystem.PlayerUnit?.SetAnimatorIsPlayerTurn(false); // Tell animator player's turn is ending
 
         yield return StartCoroutine(ShowMessageRoutine($"Recovered {finalHealValue} HP!", _battleSystem.TurnDelay));
         yield return StartCoroutine(_battleSystem.EnemyTurnRoutine());
@@ -268,11 +419,30 @@ public class BattleActionsRefactored : MonoBehaviour
     {
         if (!ValidateBattleSystemReference()) yield break;
 
+        // Get the Player's Animator Controller
+        UnitAnimatorController playerAnimController = null;
+        if (_battleSystem.PlayerUnit != null)
+        {
+            playerAnimController = _battleSystem.PlayerUnit.GetComponent<UnitAnimatorController>();
+        }
+        if (playerAnimController == null && _battleSystem.PlayerUnit != null)
+        {
+            Debug.LogWarning($"[BattleActions] PlayerUnit '{_battleSystem.PlayerUnit.name}' is missing UnitAnimatorController component.", _battleSystem.PlayerUnit);
+        }
+
         // Disable input and set defending state
         _battleSystem.SetActionButtonsInteractable(false);
+
+        // --- Trigger Player's Defend Tween ---
+        playerAnimController?.TriggerDefend();
+
+        // play defend sound
+        _audioSource?.PlayOneShot(_defendActionSound, _defendActionSoundSound); // Play defend sound
+
         _battleSystem.PlayerUnit.StartDefending();
 
-        _battleSystem.PlayerUnit?.SetAnimatorIsPlayerTurn(false); // Tell animator player's turn is ending
+
+        //_battleSystem.PlayerUnit?.SetAnimatorIsPlayerTurn(false); // Tell animator player's turn is ending
 
         // Show message and transition turn
         yield return StartCoroutine(ShowMessageRoutine("You brace yourself!", _battleSystem.TurnDelay));

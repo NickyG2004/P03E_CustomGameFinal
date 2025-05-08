@@ -42,10 +42,17 @@ public class MenuSystemRefactored : MonoBehaviour
     [SerializeField, Tooltip("The exact name of the Main Menu scene asset to load.")]
     private string _mainMenuSceneName = "MainMenuScene"; // Provide a default
 
+    [Header("Sound Effects")]
+    [SerializeField, Tooltip("Buttons sound effect for Menus.")]
+    private AudioClip _MenuButtonSound = null;
+    [SerializeField, Tooltip("Menu Buttons sound effect Volume.")]
+    private float _MenuButtonSoundVolume = 1f;
+
     // -------------------------------------------------------------------------
     // Private Fields
     // -------------------------------------------------------------------------
     private ScreenFader _screenFader; // Optional component for smooth fades
+    private AudioSource _audioSource;
 
     // -------------------------------------------------------------------------
     // Unity Callbacks
@@ -67,6 +74,9 @@ public class MenuSystemRefactored : MonoBehaviour
 
         // Attempt to find the optional ScreenFader
         _screenFader = FindFirstObjectByType<ScreenFader>(FindObjectsInactive.Include);
+
+        // get the AudioSource attached to the game object.
+        _audioSource = GetComponent<AudioSource>();
         // No warning needed here, functionality adapts if it's null
 
         // Set initial state: Only Battle UI should be visible at start
@@ -80,22 +90,44 @@ public class MenuSystemRefactored : MonoBehaviour
     // -------------------------------------------------------------------------
 
     /// <summary> Shows the Win Menu canvas. </summary>
-    public void ShowWinMenu() => SetMenuState(_winMenu, true);
+    public void ShowWinMenu()
+    {
+        SetMenuState(_winMenu, true);
+    }
 
     /// <summary> Shows the Lose Menu canvas. </summary>
-    public void ShowLoseMenu() => SetMenuState(_loseMenu, true);
+    public void ShowLoseMenu()
+    {
+        SetMenuState(_loseMenu, true);
+    }
 
     /// <summary> Hides the Win Menu and transitions back to start a new battle. </summary>
-    public void OnWinMenuNextBattle() => StartCoroutine(TransitionBackToBattleRoutine(_winMenu, false));
+    public void OnWinMenuNextBattle()
+    {
+        _audioSource.PlayOneShot(_MenuButtonSound, _MenuButtonSoundVolume);
+        StartCoroutine(TransitionBackToBattleRoutine(_winMenu, false));
+    }
 
     /// <summary> Hides the Lose Menu and transitions back to restart the battle (resets progress). </summary>
-    public void OnLoseMenuRetry() => StartCoroutine(TransitionBackToBattleRoutine(_loseMenu, true));
+    public void OnLoseMenuRetry()
+    {
+        _audioSource.PlayOneShot(_MenuButtonSound, _MenuButtonSoundVolume);
+        StartCoroutine(TransitionBackToBattleRoutine(_loseMenu, true));
+    }
 
     /// <summary> Transitions from the Lose Menu back to the Main Menu (resets progress). </summary>
-    public void OnLoseMenuMainMenu() => StartCoroutine(TransitionToMainMenuRoutine(true));
+    public void OnLoseMenuMainMenu()
+    {
+        _audioSource.PlayOneShot(_MenuButtonSound, _MenuButtonSoundVolume);
+        StartCoroutine(TransitionToMainMenuRoutine(true));
+    }
 
     /// <summary> Transitions from the Win Menu back to the Main Menu (keeps progress). </summary>
-    public void OnWinMenuMainMenu() => StartCoroutine(TransitionToMainMenuRoutine(false));
+    public void OnWinMenuMainMenu()
+    {
+        _audioSource.PlayOneShot(_MenuButtonSound, _MenuButtonSoundVolume);
+        StartCoroutine(TransitionToMainMenuRoutine(false));
+    }
 
 
     // -------------------------------------------------------------------------

@@ -119,6 +119,53 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &116943286
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 116943288}
+  - component: {fileID: 116943287}
+  m_Layer: 0
+  m_Name: ScreenShot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &116943287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 116943286}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f80e8a2a562c6504f874e2064d776c86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  screenshotKey: 107
+  screenshotFolderName: Screenshots
+  filenamePrefix: Screenshot_
+--- !u!4 &116943288
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 116943286}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 445.0426, y: 977.2434, z: -1.9523983}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &234268683
 GameObject:
   m_ObjectHideFlags: 0
@@ -369,6 +416,7 @@ GameObject:
   - component: {fileID: 373553318}
   - component: {fileID: 373553317}
   - component: {fileID: 373553319}
+  - component: {fileID: 373553321}
   - component: {fileID: 373553320}
   m_Layer: 5
   m_Name: MainMenu
@@ -424,9 +472,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _battleSceneName: Level01
-  _levelSong: {fileID: 8300000, guid: 5915a8f2274a67b4fb20a07d805122ed, type: 3}
-  _menuMusicClip: {fileID: 8300000, guid: 5e8ed54981e3dd64b913ccfb15729e8d, type: 3}
-  _menuMusicFadeTime: 1.5
+  _levelSong: {fileID: 8300000, guid: 5792a61021016cf4fb533835f07ac208, type: 3}
+  _menuMusicClip: {fileID: 8300000, guid: b21083a7371bb67418c6fe965a5fd09c, type: 3}
+  _menuMusicFadeTime: 1
   _debugMode: 0
   _highScoreLabelName: HighScore
   _resetHighScoreButtonName: ResetButton
@@ -528,6 +576,18 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &373553321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 373553316}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c2b3ea67d724da4a9df73bef7b18708, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -810,3 +870,4 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 373553318}
   - {fileID: 234268687}
+  - {fileID: 116943288}
